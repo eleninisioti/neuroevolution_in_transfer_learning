@@ -9,7 +9,7 @@ from scripts.train.rl.ppo.train_utils import PPOExperiment as Experiment
 import os
 import envs
 from scripts.train.base.utils import default_env_params
-from scripts.train.rl.ppo.hyperparams import train_timesteps, arch, hyperparams
+from scripts.train.rl.ppo.hyperparams import train_timesteps, arch
 import argparse
 
 

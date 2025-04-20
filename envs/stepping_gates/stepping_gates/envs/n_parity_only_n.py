@@ -23,7 +23,7 @@ class NParity(Circuit):
 
     """
 
-    def __init__(self, n_input=6, curriculum="up-to-n", episode_type="one-step" ):
+    def __init__(self, n_input=6, curriculum=False, episode_type="one-step" ):
 
         super().__init__()
 
@@ -41,7 +41,7 @@ class NParity(Circuit):
 
         self.max_reward = 0.0
         self.reward_for_solved =0
-        if curriculum != "disable":
+        if curriculum:
             self.task_params = jnp.array([2, 3, 4, 5, 6]) # task 0 has 2 inputs, task 1 has 3 ....
             self.num_tasks = len(self.task_params)
         else:

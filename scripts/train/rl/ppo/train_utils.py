@@ -11,7 +11,7 @@ import numpy as onp
 import jax.numpy as jnp
 import jax
 from scripts.train.base.visuals import viz_histogram, viz_heatmap
-
+from scripts.train.rl.ppo.hyperparams import hyperparams
 def _unpmap(v):
   return jax.tree_util.tree_map(lambda x: x[0], v)
 
@@ -24,9 +24,12 @@ class PPOExperiment(Experiment):
 
     def init_model(self):
 
-        train_fn = functools.partial(ppo.train, **self.config["optimizer_config"]["optimizer_params"],
+        train_fn = functools.partial(ppo.train,
                                      **self.config["model_config"]["model_params"],
-                                     episode_length=self.config["env_config"]["episode_length"])
+                                     **hyperparams[self.config["env_config"]["env_name"]],
+                                     episode_length=self.config["env_config"]["episode_length"],
+                                     num_timesteps=self.config["optimizer_config"]["optimizer_params"]["num_timesteps"],
+                                     seed=self.config["exp_config"]["trial_seed"])
         self.model = functools.partial(train_fn.func, **train_fn.keywords)
 
     def cleanup(self):
@@ -76,8 +79,7 @@ class PPOExperiment(Experiment):
 
         make_inference_fn, params, _, training_state = self.model(environment=self.env,
                                                                   progress_fn=self.progress,
-                                                                  save_params_fn=self.save_params,
-                                                                  seed=self.config["exp_config"]["trial_seed"])
+                                                                  save_params_fn=self.save_params)
 
         self.final_state = {"inference_fn": make_inference_fn,
                             "params": params,
