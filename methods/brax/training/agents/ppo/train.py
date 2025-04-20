@@ -24,7 +24,7 @@ from typing import Callable, Optional, Tuple, Union
 from absl import logging
 from brax import base
 from brax import envs
-from source.other_frameworks.brax.training import acting
+from brax.training import acting
 from brax.training import gradients
 from brax.training import pmap
 from brax.training import types
@@ -42,12 +42,11 @@ import jax.numpy as jnp
 import numpy as np
 import optax
 from orbax import checkpoint as ocp
-from source.other_frameworks.brax.wrappers.training import wrap as brax_wrap
+from brax.wrappers.training import wrap as brax_wrap
 #from brax.envs.wrappers.training import wrap as brax_wrap
 
 from envs.stepping_gates.stepping_gates.envs.wrappers import wrap as dgates_wrap
 import gymnasium
-from envs.gym.wrappers import wrap as gym_wrap
 import numpy as onp
 InferenceParams = Tuple[running_statistics.NestedMeanStd, Params]
 Metrics = types.Metrics

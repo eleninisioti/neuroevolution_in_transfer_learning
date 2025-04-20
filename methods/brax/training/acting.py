@@ -26,7 +26,7 @@ from brax.training.types import Transition
 from brax.v1 import envs as envs_v1
 import jax
 import numpy as np
-from source.other_frameworks.brax.wrappers.training import EvalWrapper
+from brax.wrappers.training import EvalWrapper
 State = Union[envs.State, envs_v1.State]
 Env = Union[envs.Env, envs_v1.Env, envs_v1.Wrapper]
 
