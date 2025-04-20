@@ -67,7 +67,7 @@ def make_ppo_networks(
     .identity_observation_preprocessor,
     policy_hidden_layer_sizes: Sequence[int] = (32,) * 4,
     value_hidden_layer_sizes: Sequence[int] = (256,) * 5,
-    activation: networks.ActivationFn = linen.swish) -> PPONetworks:
+    activation: networks.ActivationFn = linen.tanh) -> PPONetworks:
   """Make PPO networks with preprocessor."""
   parametric_action_distribution = distribution.NormalTanhDistribution(
       event_size=action_size)

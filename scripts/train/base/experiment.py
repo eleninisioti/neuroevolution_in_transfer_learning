@@ -109,6 +109,8 @@ class Experiment:
     def cleanup_trial(self):
         self.logger_run.close()
         
+        print("Experiment data saved under ", self.project_dir)
+        
     def train_trial(self):
         pass
     
@@ -128,7 +130,7 @@ class Experiment:
             self.cleanup_trial()
 
             with open(self.config["exp_config"]["project_dir"] + "/aim_hashes.yaml", "a") as f:
-                yaml.dump(self.aim_hashes, f)
+                yaml.dump(self.aim_hashes[trial], f)
 
         self.cleanup()
 

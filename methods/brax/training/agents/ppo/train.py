@@ -325,7 +325,7 @@ def train(
           mask_policy=policy_mask,
           mask_value=value_mask,
           policy_hidden_layer_sizes= (num_neurons,) * num_layers,
-        value_hidden_layer_sizes=(num_neurons*8,)*(num_layers+1),
+        value_hidden_layer_sizes=(num_neurons*2,)*(num_layers+1),
           preprocess_observations_fn=normalize,
       skip_connections_prob=skip_connections_prob)
   else:
