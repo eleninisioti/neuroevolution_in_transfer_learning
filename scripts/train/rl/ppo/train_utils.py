@@ -12,6 +12,8 @@ import jax.numpy as jnp
 import jax
 from scripts.train.base.visuals import viz_histogram, viz_heatmap
 from scripts.train.rl.ppo.hyperparams import hyperparams
+from stepping_gates import envs as stepping_gates_envs
+
 def _unpmap(v):
   return jax.tree_util.tree_map(lambda x: x[0], v)
 
@@ -34,6 +36,15 @@ class PPOExperiment(Experiment):
 
     def cleanup(self):
         pass
+    
+    
+    def setup_stepping_gates_env(self):
+        self.env = stepping_gates_envs.get_environment(env_name=self.config["env_config"]["env_name"],
+                                                      **self.config["env_config"]["env_params"])
+        self.config["env_config"]["action_size"] = self.env.action_size
+        self.config["env_config"]["observation_size"] = self.env.observation_size
+        self.config["env_config"]["episode_length"] = self.env.episode_length
+        self.config["env_config"]["num_tasks"] = self.env.num_tasks
 
     def save_params(self, training_state):
 

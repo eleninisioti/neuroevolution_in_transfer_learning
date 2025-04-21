@@ -1,6 +1,6 @@
 import jax.numpy as jnp
 
-import digital_gates.envs as envs
+import stepping_gates.envs as envs
 
 from .rl_jit import RLEnv
 

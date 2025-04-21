@@ -2,29 +2,18 @@ import sys
 
 import matplotlib.pyplot as plt
 
-sys.path.append(".")
 import envs
-import source
-from NDP_framework.base.utils.exp_utils import Experiment
+from scripts.train.base.experiment import Experiment
 import yaml
-from brax import envs as brax_envs
-from ecorobot import envs as ecorobot_envs
 import jax
 import equinox as eqx
 import jax.numpy as jnp
 import pickle
-from brax.io import html
 import os
-import evosax
-from source.other_frameworks.tensorneat.pipeline import Pipeline
-from source.other_frameworks.tensorneat.problem.func_fit.n_parity import Nparity
-from  source.other_frameworks.tensorneat.problem.rl.gates_env import GatesEnv
-from  source.other_frameworks.tensorneat.problem.rl.ecorobot_env import EcorobotEnv
-from  source.other_frameworks.tensorneat.problem.rl.gymnax_env import GymnaxEnv
-
-import wandb
+from  methods.tensorneat.pipeline import Pipeline
+from methods.tensorneat.problem.func_fit.n_parity import Nparity
+from  methods.tensorneat.problem.rl.gates_env import GatesEnv
 import numpy as onp
-from NDP_framework.base.utils.viz_utils import viz_heatmap,  viz_policy_network, viz_histogram
 from collections import defaultdict
 import json
 import pandas as pd
@@ -37,7 +26,7 @@ class TensorneatExperiment(Experiment):
         super().__init__(env_config, model_config, exp_config, optimizer_config)
 
 
-    def setup_digital_gates_env(self):
+    def setup_stepping_gates_env(self):
 
         self.env = GatesEnv(self.config["env_config"])
 
@@ -45,40 +34,20 @@ class TensorneatExperiment(Experiment):
         self.config["env_config"]["action_size"] = self.env.action_size
         self.config["env_config"]["observation_size"] = self.env.observation_size
         self.config["env_config"]["episode_length"] = self.env.episode_length
+        self.config["env_config"]["num_tasks"] = self.env.num_tasks
 
 
         return self.env
 
 
-    def setup_ecorobot_env(self):
-
-        self.env = EcorobotEnv(self.config["env_config"])
-        self.config["env_config"]["action_size"] = self.env.action_size
-        self.config["env_config"]["observation_size"] = self.env.observation_size
-        self.config["env_config"]["episode_length"] = self.env.episode_length
-        return self.env
-
-    def setup_gymnax_env(self):
-
-        self.env = GymnaxEnv(self.config["env_config"])
-        self.config["env_config"]["action_size"] = self.env.action_size
-        self.config["env_config"]["observation_size"] = self.env.observation_size
-        self.config["env_config"]["episode_length"] = self.env.episode_length
-        return self.env
-
-    def setup_keys(self):
-        key = jax.random.PRNGKey(self.config["exp_config"]["seed"])
-
+    def setup_trial_keys(self):
+        key = jax.random.PRNGKey(self.config["exp_config"]["trial_seed"])
         self.env_key, self.trainer_key, self.model_key = jax.random.split(key, 3)
-
-    def setup_misc(self):
-
-        with open("scripts/train_examples/tensorneat/default_config.yaml", "r") as f:
-            self.default_config = yaml.load(f, Loader=yaml.SafeLoader)
 
 
     def get_final_policy(self):
         return self.training_info["policy_network"]["final"]
+    
     def save_params(self, state):
 
         def callback(state):
@@ -95,15 +64,11 @@ class TensorneatExperiment(Experiment):
 
         # initialize model
         self.init_model()
-        params, statics = eqx.partition(self.model, eqx.is_array)
-        self.params_shaper = evosax.ParameterReshaper(params)
 
         def data_fn(data: dict):
             return {}
 
         # initialize environment
-
-
 
         self.pipeline = Pipeline(
             algorithm=self.model,
@@ -117,12 +82,10 @@ class TensorneatExperiment(Experiment):
 
 
 
-
-
     def cleanup(self):
         pass
 
-    def run_trial(self):
+    def train_trial(self):
         self.init_run()
 
         # print(state)
@@ -161,15 +124,8 @@ class TensorneatExperiment(Experiment):
 
 
 
-    def viz_population(self):
-        self.viz_policies()
-        self.viz_performance()
-
-
 
     def save_training_info(self):
-
-
 
         super().save_training_info()
 

@@ -70,16 +70,6 @@ class Experiment:
         with open(self.config["exp_config"]["project_dir"] + "/config.yaml", "w") as f:
             yaml.dump(self.config, f)
 
-
-
-    def setup_stepping_gates_env(self):
-        self.env = stepping_gates_envs.get_environment(env_name=self.config["env_config"]["env_name"],
-                                                      **self.config["env_config"]["env_params"])
-        self.config["env_config"]["action_size"] = self.env.action_size
-        self.config["env_config"]["observation_size"] = self.env.observation_size
-        self.config["env_config"]["episode_length"] = self.env.episode_length
-        self.config["env_config"]["num_tasks"] = self.env.num_tasks
-
    
 
     def setup_env(self):
@@ -90,6 +80,8 @@ class Experiment:
         self.task = Task(self.env, self.config)
 
 
+    def setup_trial_keys(self):
+        pass
 
     def init_run(self):
         self.init_model()
@@ -103,6 +95,8 @@ class Experiment:
         self.logger_run = Run(experiment=self.config["exp_config"]["logger_project"])
         self.logger_run['hparams'] = self.config
         self.aim_hashes[trial] = self.logger_run.hash
+        
+        self.setup_trial_keys()
 
         self.init_model()
 

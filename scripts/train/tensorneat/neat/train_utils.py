@@ -2,29 +2,25 @@
 import jax
 import equinox as eqx
 import jax.numpy as jnp
-from scripts.train_examples.tensorneat.tensorneat_utils import TensorneatExperiment
-import other_frameworks.tensorneat
+from scripts.train.tensorneat.train_utils import TensorneatExperiment
+import methods.tensorneat
 import numpy as onp
-from source.other_frameworks.tensorneat.algorithm import NEAT
-from source.other_frameworks.tensorneat.genome import DefaultGenome
-from source.other_frameworks.tensorneat.genome.gene import DefaultNode, DefaultConn
-
-from source.other_frameworks.tensorneat.genome.operations.mutation import DefaultMutation
-
-from source.other_frameworks.tensorneat.genome.gene import DefaultConn, DefaultNode
-
-from source.other_frameworks.tensorneat.common import ACT, AGG
-import wandb
+from methods.tensorneat.algorithm import NEAT
+from methods.tensorneat.genome import DefaultGenome
+from methods.tensorneat.genome.gene import DefaultNode, DefaultConn
+from methods.tensorneat.genome.operations.mutation import DefaultMutation
+from methods.tensorneat.genome.gene import DefaultConn, DefaultNode
+from methods.tensorneat.common import ACT, AGG
 import matplotlib.pyplot as plt
 from collections import defaultdict
-from source.NDP_framework.base.utils.viz_utils import viz_heatmap, viz_policy_network
 import networkx as nx
 import pickle
+from scripts.train.base.visuals import viz_histogram, viz_heatmap
 
 
 
 
-class NeatExperiment(TensorneatExperiment):
+class NEATExperiment(TensorneatExperiment):
 
     def __init__(self, env_config, model_config, exp_config, optimizer_config):
         super().__init__(env_config, model_config, exp_config, optimizer_config)
@@ -37,19 +33,14 @@ class NeatExperiment(TensorneatExperiment):
             max_nodes=self.config["model_config"]["model_params"]["max_nodes"],
             output_transform=ACT.tanh,
             max_conns=self.config["model_config"]["model_params"]["max_nodes"]*4,
-            #output_transform=ACT.sigmoid,
-
             mutation=DefaultMutation(conn_add=self.config["model_config"]["model_params"]["conn_add"],
                                      conn_delete=self.config["model_config"]["model_params"]["conn_delete"],
                                      node_add=self.config["model_config"]["model_params"]["node_add"],
                                      node_delete=self.config["model_config"]["model_params"]["node_delete"],
                                      ),
-
             node_gene=DefaultNode(
                 activation_options=(ACT.tanh,),
                 activation_default=ACT.tanh,
-                #activation_options=(ACT.relu,),
-                #activation_default=ACT.relu,
                 bias_mutate_rate=self.config["model_config"]["model_params"]["mut_node"],
                 response_mutate_rate=self.config["model_config"]["model_params"]["mut_node"],
 
@@ -63,9 +54,6 @@ class NeatExperiment(TensorneatExperiment):
             species_size=self.config["optimizer_config"]["optimizer_params"]["num_species"],
             survival_threshold=0.01
         )
-
-
-
 
 
 
@@ -126,70 +114,9 @@ class NeatExperiment(TensorneatExperiment):
             hyperneat_network, save_path="hyperneat_network.svg"
         )
         adj_matrix = nx.to_numpy_array(graph, weight="weight")
-        plt.clf()
         return adj_matrix
 
 
-
-    def viz_policies(self):
-        fig, axes = plt.subplots(2, 5, figsize=(15, 8))
-        axes = axes.flatten()
-
-        pop_conns = self.final_state["state"].state_dict["pop_conns"]
-        pop_nodes = self.final_state["state"].state_dict["pop_nodes"]
-
-        fitnesses = onp.array(self.final_state["state"].state_dict["fitnesses"])
-        species_ids = onp.array(
-            self.final_state["state"].state_dict["species"].state_dict["idx2species"])
-
-        species = defaultdict(list)
-        for indiv_idx, indiv_conns in enumerate(onp.array(pop_conns)):
-            species[species_ids[indiv_idx]].append( fitnesses[indiv_idx])
-        species_idx = 0
-
-        for _, indivs in species.items():
-            # find indiv with highest fitness
-            most_fit= onp.argmax(indivs)
-            nodes = pop_nodes[most_fit, ...]
-            conns = pop_conns[most_fit, ...]
-
-            network = self.model.genome.network_dict(self.final_state["state"], nodes, conns)
-            graph = self.model.genome.visualize(network,
-                                        save_path="temp.png",
-                                                ax=axes[int(species_idx)])
-            """
-            weights = nx.to_numpy_array(graph, weight="weight")
-            
-            viz_policy_network(weights=weights,
-                               n_input=self.config["env_config"]["observation_size"],
-                               n_output=self.config["env_config"]["action_size"],
-                               filename=self.config["exp_config"]["trial_dir"] + "/visuals/population/networks/",
-                               network_type=self.config["model_config"]["network_type"],
-                               ax=axes[int(species_idx)])
-            """
-            axes[int(species_idx)].set_title("Fitness: " + str(indivs[most_fit]))
-
-            species_idx +=1
-
-            if species_idx > 9:
-                break
-
-
-        plt.tight_layout()
-        filename = self.config["exp_config"]["trial_dir"] + "/visuals/population/policy_network.png"
-        plt.savefig(filename, dpi=300)
-
-        self.logger_run.track(filename, name='policy_network', format='png')  # Specify format like 'gif' or 'mp4'
-
-        #wandb.log({"Best policy per species": fig})
-        plt.clf()
-        plt.close()
-
-    def viz_final_policy(self):
-        network = self.model.genome.network_dict(self.final_state["state"], *self.final_state["params"])
-        graph = self.model.genome.visualize(network, save_path=self.config["exp_config"]["trial_dir"] + "/visuals/policy/network.png")
-        plt.clf()
-        super().viz_final_policy()
 
     def save_training_info(self):
 

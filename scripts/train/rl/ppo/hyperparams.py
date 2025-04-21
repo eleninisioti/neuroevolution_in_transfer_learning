@@ -35,6 +35,8 @@ hyperparams = {
 
 # ------ neural network architecture for policy network. just MLPs ------
 arch = {"n_parity_only_n": {"num_layers": 6,
+                     "num_neurons": 4},
+        "simple_alu": {"num_layers": 6,
                      "num_neurons": 4}}
 
 

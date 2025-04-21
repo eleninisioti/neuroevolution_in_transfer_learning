@@ -1,28 +1,30 @@
 
+
 import jax
 import equinox as eqx
 import jax.numpy as jnp
-from scripts.train_examples.tensorneat.tensorneat_utils import TensorneatExperiment
-import other_frameworks.tensorneat
+from scripts.train.tensorneat.train_utils import TensorneatExperiment
+import methods.tensorneat
 import numpy as onp
-from source.other_frameworks.tensorneat.algorithm import NEAT
-from source.other_frameworks.tensorneat.algorithm.hyperneat import HyperNEATFeedForward, HyperNEAT
-from source.other_frameworks.tensorneat.algorithm.hyperneat.substrate import MLPSubstrate, FullSubstrate
-from source.other_frameworks.tensorneat.genome.operations.mutation import DefaultMutation
+from methods.tensorneat.algorithm import NEAT
+from methods.tensorneat.algorithm.hyperneat import HyperNEATFeedForward, HyperNEAT
+from methods.tensorneat.algorithm.hyperneat.substrate import MLPSubstrate, FullSubstrate
+from methods.tensorneat.genome.operations.mutation import DefaultMutation
+from methods.tensorneat.genome.gene import DefaultConn, DefaultNode
 
-from source.other_frameworks.tensorneat.genome import DefaultGenome
-from source.other_frameworks.tensorneat.common import ACT, AGG
-from scripts.train_examples.tensorneat.hyperneat.substrates import get_substrate
-from NDP_framework.base.utils.viz_utils import viz_heatmap,  viz_policy_network, viz_histogram
-import networkx as nx
-from collections import defaultdict
+from methods.tensorneat.genome import DefaultGenome
+from methods.tensorneat.common import ACT, AGG
+from scripts.train.tensorneat.hyperneat.substrates import get_substrate
+
+from methods.tensorneat.common import ACT, AGG
 import matplotlib.pyplot as plt
-import wandb
-from source.other_frameworks.tensorneat.genome.gene import DefaultConn, DefaultNode
+from collections import defaultdict
+import networkx as nx
 import pickle
+from scripts.train.base.visuals import viz_histogram, viz_heatmap
 
 
-class HyperNeatExperiment(TensorneatExperiment):
+class HyperNEATExperiment(TensorneatExperiment):
 
     def __init__(self, env_config, model_config, exp_config, optimizer_config):
         super().__init__(env_config, model_config, exp_config, optimizer_config)
@@ -75,7 +77,7 @@ class HyperNeatExperiment(TensorneatExperiment):
 
 
 
-        if self.config["model_config"]["model_name"]=="RNN":
+        if self.config["model_config"]["network_type"]=="RNN":
 
             input_coors, hidden_coors, output_coors = get_substrate(self.config["env_config"]["env_name"],
                                                                     n_input=self.config["env_config"]["observation_size"],
@@ -157,90 +159,8 @@ class HyperNeatExperiment(TensorneatExperiment):
             )
 
 
-    def viz_policies(self):
-        fig, axes = plt.subplots(2, 5, figsize=(15, 8))
-        axes = axes.flatten()
-
-        pop_conns = self.final_state["state"].state_dict["pop_conns"]
-        pop_nodes = self.final_state["state"].state_dict["pop_nodes"]
-
-        fitnesses = onp.array(self.final_state["state"].state_dict["fitnesses"])
-        species_ids = onp.array(
-            self.final_state["state"].state_dict["species"].state_dict["idx2species"])
-
-        species = defaultdict(list)
-        for indiv_idx, indiv_conns in enumerate(onp.array(pop_conns)):
-            species[species_ids[indiv_idx]].append(fitnesses[indiv_idx])
-        species_idx = 0
-
-        for _, indivs in species.items():
-            # find indiv with highest fitness
-            most_fit = onp.argmax(indivs)
-            nodes = pop_nodes[most_fit, ...]
-            conns = pop_conns[most_fit, ...]
-
-            network = self.model.hyper_genome.network_dict(self.final_state["state"], nodes, conns)
-            graph = self.model.hyper_genome.visualize(network,
-                                                save_path="temp.png",
-                                                ax=axes[int(species_idx)])
-            """
-            weights = nx.to_numpy_array(graph, weight="weight")
-
-            viz_policy_network(weights=weights,
-                               n_input=self.config["env_config"]["observation_size"],
-                               n_output=self.config["env_config"]["action_size"],
-                               filename=self.config["exp_config"]["trial_dir"] + "/visuals/population/networks/",
-                               network_type=self.config["model_config"]["network_type"],
-                               ax=axes[int(species_idx)])
-            """
-            axes[int(species_idx)].set_title("Fitness: " + str(indivs[most_fit]))
-
-            species_idx += 1
-
-            if species_idx > 10:
-                break
-
-        plt.tight_layout()
-        plt.savefig(self.config["exp_config"]["trial_dir"] + "/visuals/population/policy_networks.png", dpi=300)
-
-        #wandb.log({"Best policy per species": fig})
-        plt.clf()
-        plt.close()
 
 
-    def viz_final_policy(self):
-
-        cppn_genome = self.model.neat.genome
-        state = self.final_state["state"]
-        best = self.final_state["params"]
-        cppn_network = cppn_genome.network_dict(state, *best)
-        graph = cppn_genome.visualize(cppn_network,
-                                      save_path=self.config["exp_config"]["trial_dir"] + "/visuals/policy/cppn_tensorneat.png")
-        plt.clf()
-        cppn_matrix = nx.to_numpy_array(graph, weight="weight")
-
-        # visualize hyperneat genome
-        hyperneat_genome = self.model.hyper_genome
-        # use cppn to calculate the weights in hyperneat genome
-        # return seqs, nodes, conns, u_conns
-        _, hyperneat_nodes, hyperneat_conns, _ = self.model.transform(state, best)
-        # mutate the connection with weight 0 (to visualize the network rather the substrate)
-        hyperneat_conns = jnp.where(
-            hyperneat_conns[:, 2][:, None] == 0, jnp.nan, hyperneat_conns
-        )
-        hyperneat_network = hyperneat_genome.network_dict(
-            state, hyperneat_nodes, hyperneat_conns
-        )
-        graph = hyperneat_genome.visualize(
-            hyperneat_network, save_path=self.config["exp_config"]["trial_dir"] + "/visuals/policy/network.png"
-        )
-
-
-
-        super().viz_final_policy()
-
-        viz_heatmap(cppn_matrix,
-                    filename=self.config["exp_config"]["trial_dir"] + "/visuals/policy/cppn_heatmap")
 
     def params_to_weights(self, params):
         state = self.final_state["state"]
