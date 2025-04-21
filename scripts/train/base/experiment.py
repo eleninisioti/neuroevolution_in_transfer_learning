@@ -78,6 +78,7 @@ class Experiment:
         self.config["env_config"]["action_size"] = self.env.action_size
         self.config["env_config"]["observation_size"] = self.env.observation_size
         self.config["env_config"]["episode_length"] = self.env.episode_length
+        self.config["env_config"]["num_tasks"] = self.env.num_tasks
 
    
 
@@ -109,7 +110,7 @@ class Experiment:
     def cleanup_trial(self):
         self.logger_run.close()
         
-        print("Experiment data saved under ", self.project_dir)
+        print("Experiment data saved under ", self.config["exp_config"]["project_dir"])
         
     def train_trial(self):
         pass
