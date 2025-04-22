@@ -1,15 +1,16 @@
-""" Script for training Proximal Policy Optimisation"""
+""" Script for training CMA-ES """
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../..')))
 sys.path.insert(0, "methods")
+sys.path.insert(0, "methods/evosax_wrapper") # to be able to import evosax
 sys.path.insert(0, "scripts")
-
-from scripts.train.rl.ppo.train_utils import PPOExperiment as Experiment
+import methods.evosax_wrapper.evosax
+from scripts.train.evosax.train_utils import EvosaxExperiment as Experiment
 import os
 import envs
 from scripts.train.base.utils import default_env_params
-from scripts.train.rl.ppo.hyperparams import train_timesteps, arch
+from scripts.train.evosax.cma_es.hyperparams import train_gens, hyperparams
 import argparse
 
 
@@ -22,7 +23,7 @@ def train_stepping_gates(num_trials, env_name, curriculum):
     
     # configure environment
     env_params = default_env_params[env_name]
-    env_params["episode_type"] = "one-step"
+    env_params["episode_type"] = "full"
     env_params["curriculum"] = curriculum
     env_config = {"env_type": "stepping_gates",
                   "env_name": env_name,
@@ -31,13 +32,15 @@ def train_stepping_gates(num_trials, env_name, curriculum):
     
     
     # configure method
-    num_timesteps = train_timesteps[env_name]
-    optimizer_config = {"optimizer_name": "ppo",
-                        "optimizer_type": "brax",
-                        "optimizer_params": {"num_timesteps": num_timesteps}}
+    num_timesteps = train_gens[env_name]
+    optimizer_config = {"optimizer_name": "cma_es",
+                        "optimizer_type": "evosax",
+                        "optimizer_params": {"generations": num_timesteps,
+                                             "strategy": "CMA_ES",
+                                             "popsize": 256}}
     
     model_config = {"network_type": "MLP",
-                    "model_params": arch[env_name]}
+                    "model_params": hyperparams[env_name]}
 
 
     exp = Experiment(env_config=env_config,

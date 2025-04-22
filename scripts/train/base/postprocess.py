@@ -143,5 +143,7 @@ if __name__ == "__main__":
     
     project = args.project
     project = "/home/eleni/workspace/neuroevolution_in_transfer_learning/projects/benchmarking/2025_04_20/stepping_gates_n_parity_only_n_n_input_6_episode_type_one-step_curriculum_False/brax_ppo/num_timesteps_150000000/feedforward_num_layers_6_num_neurons_4"
+    project = "projects/gecco_2025/n_parity/no_curric/hyperneat"
     post_process(project)
+    
     

@@ -125,7 +125,7 @@ class Experiment:
             self.cleanup_trial()
 
             with open(self.config["exp_config"]["project_dir"] + "/aim_hashes.yaml", "a") as f:
-                yaml.dump(self.aim_hashes[trial], f)
+                yaml.dump({trial: self.aim_hashes[trial]}, f)
 
         self.cleanup()
 

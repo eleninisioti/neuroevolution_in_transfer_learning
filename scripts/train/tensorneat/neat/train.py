@@ -57,13 +57,7 @@ def train_stepping_gates(num_trials, env_name, curriculum):
 def train_all(num_trials):
     train_stepping_gates(num_trials=num_trials, env_name="n_parity_only_n", curriculum=False)
     train_stepping_gates(num_trials=num_trials, env_name="n_parity_only_n", curriculum=True)
-    #train_stepping_gates(num_trials=num_trials, env_name="simple_alu", curriculum=False)
     train_stepping_gates(num_trials=num_trials, env_name="simple_alu", curriculum=True)
-
-
-
-
-
 
 
 
