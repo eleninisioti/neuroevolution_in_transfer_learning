@@ -38,14 +38,16 @@ class Task:
 
         self.eval_info = {}
 
-    def run_eval(self, act_fn, saving_dir, tasks, final_policy=False):
+    def run_eval(self, act_fn, saving_dir, tasks, gens=None, final_policy=False):
         env = self.env
         jit_env_reset = jax.jit(env.reset)
         jit_env_step = jax.jit(env.step)
-        trial_rewards = []
-        trial_success = []
+
 
         for task in tasks:
+            
+            trial_rewards = []
+            trial_success = []
 
             if not os.path.exists(saving_dir + "/task_" + str(task)):
                 os.makedirs(saving_dir + "/task_" + str(task))
@@ -114,6 +116,9 @@ class Task:
             if final_policy:
                 task_alias += "_final_policy"
 
-            self.eval_info[task_alias] = {"rewards": [float(el) for el in trial_rewards],
-                                    "success": [float(el) for el in trial_success]}
-
+                self.eval_info[task_alias] = {"rewards": [float(el) for el in trial_rewards],
+                                        "success": [float(el) for el in trial_success]}
+            else:
+                self.eval_info[task_alias] = {"rewards": [float(el) for el in trial_rewards],
+                                        "success": [float(el) for el in trial_success],
+                                        "gens": gens}

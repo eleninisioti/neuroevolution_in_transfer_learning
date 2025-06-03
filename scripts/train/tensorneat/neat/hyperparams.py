@@ -1,6 +1,6 @@
 
 # ------ total training time -------
-train_gens = {"n_parity_only_n": 5000,
+train_gens = {"n_parity_only_n": 10000,
                    "simple_alu": 10000}
 
 # ------ PPO hyperparams for brax implementation -------

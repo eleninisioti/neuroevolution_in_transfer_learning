@@ -123,7 +123,9 @@ class NEATExperiment(TensorneatExperiment):
         #weights = self._map_to_adjacency_matrix(conns)
 
         network = self.model.genome.network_dict(self.final_state["state"],  *self.final_state["params"])
-        graph = self.model.genome.visualize(network, save_path="policy_network.svg")
+        plt.clf()
+
+        graph = self.model.genome.visualize(network, save_path=self.config["exp_config"]["trial_dir"]  + "/visuals/train/policy/policy_network.svg")
         plt.clf()
         adj_matrix = nx.to_numpy_array(graph, weight="weight")
 
@@ -132,7 +134,14 @@ class NEATExperiment(TensorneatExperiment):
             try:
                 with open(self.config["exp_config"]["trial_dir"] + "/data/train/checkpoints/params_task_" + str(
                         task) + ".pkl", "rb") as f:
-                    params = pickle.load(f)
+                    _, params = pickle.load(f)
+                    
+                    #network = self.model.genome.network_dict(self.final_state["state"],  params)
+                    plt.clf()
+
+                    #graph = self.model.genome.visualize(network, save_path=self.config["exp_config"]["trial_dir"]  + "/visuals/train/policy/policy_network_checkpoint_" +str(task) ".svg")
+                    plt.clf()
+                    adj_matrix = nx.to_numpy_array(graph, weight="weight")
                     checkpoint_weights.append(self.params_to_weights(params))
             except FileNotFoundError:
                 continue

@@ -9,13 +9,13 @@ from tensorneat.algorithm import BaseAlgorithm
 from tensorneat.problem import BaseProblem
 from tensorneat.common import State, StatefulBaseClass
 import aim
+import wandb
 
 class Pipeline(StatefulBaseClass):
     def __init__(
         self,
         algorithm: BaseAlgorithm,
         problem: BaseProblem,
-        logger_run,
         save_params_fn,
         seed: int = 42,
         fitness_target: float = 1,
@@ -25,7 +25,6 @@ class Pipeline(StatefulBaseClass):
     ):
         assert problem.jitable, "Currently, problem must be jitable"
 
-        self.logger_run = logger_run
         self.save_params_fn = save_params_fn
         self.algorithm = algorithm
         self.problem = problem
@@ -128,7 +127,7 @@ class Pipeline(StatefulBaseClass):
             f"compile finished, cost time: {time.time() - tic:.6f}s",
         )
 
-        for _ in range(self.generation_limit):
+        for gen in range(self.generation_limit):
 
             self.generation_timestamp = time.time()
 
@@ -142,7 +141,7 @@ class Pipeline(StatefulBaseClass):
             self.analysis(state, previous_pop, fitnesses)
 
             if jnp.logical_and(state.current_task < self.problem.num_tasks, jnp.max(fitnesses) >= self.fitness_target):
-                self.save_params_fn((self.best_genome, state.current_task))
+                self.save_params_fn((self.best_genome, state.current_task, gen))
                 fitnesses = -1*jnp.ones_like(fitnesses)
                 self.best_fitness = -99999
 
@@ -225,8 +224,8 @@ class Pipeline(StatefulBaseClass):
                       "std_species_size": float(np.std(species_sizes)),
                       "current_task": int(state.current_task)}
 
-        for key, value in logging_info.items():
-            self.logger_run.track(value, name=key)
+        
+        wandb.log(logging_info)
 
 
     def show(self, state, best, *args, **kwargs):

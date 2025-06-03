@@ -1,6 +1,5 @@
 from datetime import datetime
 import os
-from aim import Run, Repo
 import jax.random
 import yaml
 import envs
@@ -9,7 +8,7 @@ import envs
 import pickle
 import numpy as onp
 import subprocess
-from aim import Run, Image
+import wandb
 import matplotlib.pyplot as plt
 from stepping_gates import envs as stepping_gates_envs
 from brax import envs as brax_envs
@@ -44,12 +43,12 @@ class Experiment:
             f"{key}_{value}" for key, value in self.config["optimizer_config"]["optimizer_params"].items())
 
         project_dir = "projects/benchmarking/" + datetime.today().strftime(
-            '%Y_%m_%d') + "/" + self.env_alias + "/" + self.opt_alias + "/" + self.model_alias
+            '%Y_%m_%d') + "/" + self.env_alias + "/" + self.opt_alias + "/" + self.model_alias + "_withgraph"
 
         print("Saving project under " + project_dir)
 
         self.config["exp_config"]["project_dir"] = project_dir
-        self.config["exp_config"]["logger_project"] = self.env_alias  # experiment name for aim tracking
+
         
 
         if not os.path.exists(project_dir):
@@ -63,7 +62,6 @@ class Experiment:
             os.makedirs(project_dir + "/trial_" + str(trial) + "/visuals/train/policy", exist_ok=True)
             os.makedirs(project_dir + "/trial_" + str(trial) + "/visuals/eval/network_activations", exist_ok=True)
 
-        self.aim_hashes = {}  # each trial has its own hash
         
         self.setup_env()
         
@@ -76,6 +74,12 @@ class Experiment:
 
         if self.config["env_config"]["env_type"] == "stepping_gates":
             self.setup_stepping_gates_env()
+            
+        elif self.config["env_config"]["env_type"] == "brax":
+            self.setup_brax_env()
+            
+        elif self.config["env_config"]["env_type"] == "ecorobot":
+            self.setup_ecorobot_env()
 
         self.task = Task(self.env, self.config)
 
@@ -91,18 +95,22 @@ class Experiment:
         self.config["exp_config"]["experiment"] = self.model_alias + "_" + self.opt_alias + "_trial_" + str(trial)
         self.config["exp_config"]["trial_seed"] = trial
 
-        # start aim
-        self.logger_run = Run(experiment=self.config["exp_config"]["logger_project"])
-        self.logger_run['hparams'] = self.config
-        self.aim_hashes[trial] = self.logger_run.hash
-        
+        # start logging
+        wandb.init(
+            project=self.env_alias,
+            name=self.opt_alias,
+            tags =  "/trial_" + str(trial),
+            config=self.config,
+            reinit=True
+        )        
         self.setup_trial_keys()
 
         self.init_model()
 
 
     def cleanup_trial(self):
-        self.logger_run.close()
+        #er_run.close()
+        wandb.finish()
         
         print("Experiment data saved under ", self.config["exp_config"]["project_dir"])
         
@@ -123,9 +131,6 @@ class Experiment:
             self.eval_trial()
 
             self.cleanup_trial()
-
-            with open(self.config["exp_config"]["project_dir"] + "/aim_hashes.yaml", "a") as f:
-                yaml.dump({trial: self.aim_hashes[trial]}, f)
 
         self.cleanup()
 
@@ -166,6 +171,7 @@ class Experiment:
             image_file = viz_histogram(values["rewards"], filename=self.config["exp_config"][
                                                                        "trial_dir"] + "/visuals/eval/rewards_task_" + str(
                 task))
+            """
             aim_image = Image(
                 image_file,
                 format='png',
@@ -173,10 +179,12 @@ class Experiment:
                 quality=50
             )
             self.logger_run.track(aim_image, name="rewards_task" + str(task))
+            """
             task_success.append(onp.mean(values["success"]))
 
         image_file = viz_histogram(task_success, filename=self.config["exp_config"][
                                                               "trial_dir"] + "/visuals/eval/success")
+        """
         aim_image = Image(
             image_file,
             format='png',
@@ -184,6 +192,7 @@ class Experiment:
             quality=50
         )
         self.logger_run.track(aim_image, name="success")
+        """
 
     def save_training_info(self):
             
@@ -191,6 +200,10 @@ class Experiment:
 
         with open(self.config["exp_config"]["trial_dir"] + "/data/train/final_state.pkl", "wb") as f:
             pickle.dump(final_state, f)
+            
+            
+        with open(self.config["exp_config"]["trial_dir"] + "/data/train/final_policy.pkl", "wb") as f:
+            pickle.dump(self.training_info, f)
 
 
     def eval_trial(self):
@@ -201,8 +214,8 @@ class Experiment:
 
             if params_file in param_files:
                 with open(os.path.join(top_dir, params_file), "rb") as f:
-                    params = pickle.load(f)
-                    self.eval_task(params, tasks=[task])
+                    gens, params = pickle.load(f)
+                    self.eval_task(params, gens=gens, tasks=[task])
 
             else:
                 print("Task " + str(task) + " has not been solved so not running evaluation for it")
@@ -215,8 +228,8 @@ class Experiment:
 
         self.viz_eval(self.task.eval_info)
 
-    def run_eval(self, act_fn, tasks, final_policy=False):
+    def run_eval(self, act_fn, tasks, gens, final_policy=False):
 
-        self.task.run_eval(act_fn, self.config["exp_config"]["trial_dir"] + "/visuals/eval/trajs", tasks, final_policy)
+        self.task.run_eval(act_fn, self.config["exp_config"]["trial_dir"] + "/visuals/eval/trajs", tasks, gens, final_policy)
 
     

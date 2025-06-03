@@ -51,11 +51,11 @@ class TensorneatExperiment(Experiment):
     def save_params(self, state):
 
         def callback(state):
-            params, current_task = state
+            params, current_task, gen = state
             current_task = current_task-1
-            with open(self.config["exp_config"]["trial_dir"] + "/data/train/checkpoints/params_task_" + str(current_task) + ".pkl",
+            with open(self.config["exp_config"]["trial_dir"] + "/data/train/checkpoints/params_task_" + str(current_task)+ ".pkl",
                       "wb") as f:
-                pickle.dump(params, f)
+                pickle.dump((gen, params), f)
 
         jax.debug.callback(callback, state)
         return None
@@ -77,7 +77,6 @@ class TensorneatExperiment(Experiment):
             generation_limit=self.config["optimizer_config"]["optimizer_params"]["generations"],
             seed=self.config["exp_config"]["trial_seed"],
             fitness_target=self.env.fitness_target,
-            logger_run=self.logger_run
         )
 
 
@@ -110,7 +109,7 @@ class TensorneatExperiment(Experiment):
 
 
 
-    def eval_task(self, policy_params, tasks, final_policy=False):
+    def eval_task(self, policy_params, tasks, gens=None, final_policy=False):
         pop_transformed = self.load_model(policy_params)
         state = self.final_state["state"]
 
@@ -120,7 +119,7 @@ class TensorneatExperiment(Experiment):
         def act_fn(obs, action_size=None, obs_size=None):
             return self.model.forward(state=state, transformed=pop_transformed, inputs=obs)
 
-        super().run_eval(jax.jit(act_fn), tasks, final_policy)
+        super().run_eval(jax.jit(act_fn), tasks, gens=gens, final_policy=final_policy)
 
 
 

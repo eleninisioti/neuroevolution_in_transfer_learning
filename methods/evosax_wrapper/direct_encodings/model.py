@@ -47,7 +47,6 @@ class MLP(eqx.Module):
 
         # extract weights and biases
 
-
         final_policy = PolicyState(weights=jnp.zeros((1,1)), adj=jnp.zeros((1,1)), rnn_state=jnp.zeros((jnp.zeros((1,1)).shape[0],)))
         interm_policies =jax.tree_map(lambda x: x[None,:], final_policy)
         return final_policy, interm_policies

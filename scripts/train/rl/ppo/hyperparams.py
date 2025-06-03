@@ -1,7 +1,9 @@
 
 # ------ total training time -------
 train_timesteps = {"n_parity_only_n": 150_000_000,
-                   "simple_alu": 450_000_000}
+                   "simple_alu": 450_000_000,
+                   "halfcheetah": 50_000_000,
+                   "locomotion": 50_000_000}
 
 # ------ PPO hyperparams for brax implementation -------
 hyperparams = {
@@ -31,13 +33,41 @@ hyperparams = {
                    "entropy_cost": 1e-2,
                    "action_repeat": 1,
                  },
+    "halfcheetah": {"reward_scaling": 10,
+                   "unroll_length": 20,
+                   "num_updates_per_batch": 8,
+                   "discounting": 0.95,
+                   "learning_rate": 3e-4,
+                   "num_minibatches": 32,
+                   "normalize_observations": True,
+                   "num_envs": 128,
+                   "num_evals": 20,
+                   "batch_size": 512,
+                   "entropy_cost": 1e-2,
+                   "action_repeat": 1,
+                   },
+      ("locomotion", "halfcheetah"): {"reward_scaling": 10,
+                  "unroll_length": 20,
+                  "num_updates_per_batch": 8,
+                  "discounting": 0.95,
+                  "learning_rate": 3e-4,
+                  "num_minibatches": 32,
+                  "normalize_observations": True,
+                  "num_envs": 128,
+                  "num_evals": 20,
+                  "batch_size": 512,
+                  "entropy_cost": 1e-2,
+                  "action_repeat": 1,
+                  },
 }
 
 # ------ neural network architecture for policy network. just MLPs ------
 arch = {"n_parity_only_n": {"num_layers": 6,
                      "num_neurons": 4},
         "simple_alu": {"num_layers": 6,
-                     "num_neurons": 4}}
+                     "num_neurons": 4},
+        "halfcheetah": {"num_layers": 4,
+                     "num_neurons": 32}}
 
 
 

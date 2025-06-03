@@ -39,18 +39,6 @@ class HyperNEATExperiment(TensorneatExperiment):
             self.final_state["state"], pop)  # this returns some info about nodes and connections that is useful for forward
         return jax.tree_map(lambda x : x[0,...], pop_transformed)
 
-    def eval_task(self, policy_params, tasks, final_policy=False):
-        pop_transformed = self.load_model(policy_params)
-        state = self.final_state["state"]
-
-        # Fix `y` and `z`
-        # act_fn = partial(self.model.forward, state=state, transformed=pop_transformed)
-
-        def act_fn(obs, action_size=None, obs_size=None):
-            return self.model.forward(state=state, transformed=pop_transformed, inputs=obs)
-
-        super().run_eval(jax.jit(act_fn), tasks, final_policy)
-
 
 
     def load_cppn(self):
@@ -201,7 +189,7 @@ class HyperNEATExperiment(TensorneatExperiment):
             try:
                 with open(self.config["exp_config"]["trial_dir"] + "/data/train/checkpoints/params_task_" + str(
                         task) + ".pkl", "rb") as f:
-                    params = pickle.load(f)
+                    _, params = pickle.load(f)
                     cppn, weights = self.params_to_weights(params)
 
 

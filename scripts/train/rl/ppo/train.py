@@ -48,18 +48,82 @@ def train_stepping_gates(num_trials, env_name, curriculum):
 
 
 
+def train_brax(num_trials, env_name):
 
-def train_all(num_trials):
+    # configure experiment
+    exp_config = {"seed": 0,
+                  "num_trials": num_trials}
+    
+    # configure environment
+    env_params = default_env_params[env_name]
+    env_config = {"env_type": "brax",
+                  "env_name": env_name,
+                  "curriculum": False,
+                  "env_params": env_params}
+    
+    
+    # configure method
+    num_timesteps = train_timesteps[env_name]
+    optimizer_config = {"optimizer_name": "ppo",
+                        "optimizer_type": "brax",
+                        "optimizer_params": {"num_timesteps": num_timesteps}}
+    
+    model_config = {"network_type": "MLP",
+                    "model_params": arch[env_name]}
+
+
+    exp = Experiment(env_config=env_config,
+                     optimizer_config=optimizer_config,
+                     model_config = model_config,
+                     exp_config=exp_config)
+    exp.run()
+    
+    
+def train_ecorobot(num_trials, env_name):
+
+    # configure experiment
+    exp_config = {"seed": 0,
+                  "num_trials": num_trials}
+    
+    # configure environment
+    env_params = default_env_params[env_name]
+    env_config = {"env_type": "ecorobot",
+                  "env_name": env_name,
+                  "curriculum": False,
+                  "env_params": env_params}
+    
+    
+    # configure method
+    num_timesteps = train_timesteps[env_name]
+    optimizer_config = {"optimizer_name": "ppo",
+                        "optimizer_type": "brax",
+                        "optimizer_params": {"num_timesteps": num_timesteps}}
+    
+    model_config = {"network_type": "MLP",
+                    "model_params": arch[env_name]}
+
+
+    exp = Experiment(env_config=env_config,
+                     optimizer_config=optimizer_config,
+                     model_config = model_config,
+                     exp_config=exp_config)
+    exp.run()
+
+
+
+def train_stepping_gates_all(num_trials):
     train_stepping_gates(num_trials=num_trials, env_name="n_parity_only_n", curriculum=False)
     train_stepping_gates(num_trials=num_trials, env_name="n_parity_only_n", curriculum=True)
     train_stepping_gates(num_trials=num_trials, env_name="simple_alu", curriculum=True)
 
-
-
-
-
-
+def train_brax_all(num_trials):
+    train_brax(num_trials=num_trials, env_name="halfcheetah")
     
+    
+    
+def train_ecorobot_all(num_trials):
+    train_ecorobot(num_trials=num_trials, env_name="locomotion", robot_type="halfcheetah")
+
 
 
 if __name__ == "__main__":
@@ -67,4 +131,6 @@ if __name__ == "__main__":
     parser.add_argument("--num_trials", type=int, help="Number of trials", default=10)
     args = parser.parse_args()
 
-    train_all(num_trials=args.num_trials)
+    #train_stepping_gates_all(num_trials=args.num_trials)
+    train_brax_all(num_trials=args.num_trials)
+    #train_ecorobot_all(num_trials=args.num_trials)

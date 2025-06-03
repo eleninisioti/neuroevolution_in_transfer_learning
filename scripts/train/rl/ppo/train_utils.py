@@ -12,7 +12,10 @@ import jax.numpy as jnp
 import jax
 from scripts.train.base.visuals import viz_histogram, viz_heatmap
 from scripts.train.rl.ppo.hyperparams import hyperparams
+from scripts.train.base.utils import max_rewards
 from stepping_gates import envs as stepping_gates_envs
+from brax import envs as brax_envs
+from ecorobot import envs as ecorobot_envs
 
 def _unpmap(v):
   return jax.tree_util.tree_map(lambda x: x[0], v)
@@ -45,6 +48,28 @@ class PPOExperiment(Experiment):
         self.config["env_config"]["observation_size"] = self.env.observation_size
         self.config["env_config"]["episode_length"] = self.env.episode_length
         self.config["env_config"]["num_tasks"] = self.env.num_tasks
+        
+        
+    def setup_brax_env(self):
+        self.env = brax_envs.get_environment(env_name=self.config["env_config"]["env_name"],
+                                                      **self.config["env_config"]["env_params"])
+        self.env.reward_for_solved = max_rewards[self.config["env_config"]["env_name"]]
+        self.env.num_tasks = 1
+        self.config["env_config"]["action_size"] = self.env.action_size
+        self.config["env_config"]["observation_size"] = self.env.observation_size
+        self.config["env_config"]["episode_length"] = 1000
+        self.config["env_config"]["num_tasks"] = 1
+        
+        
+    def setup_ecorobot_env(self):
+        self.env = ecorobot_envs.get_environment(env_name=self.config["env_config"]["env_name"],
+                                                      **self.config["env_config"]["env_params"])
+        self.env.reward_for_solved = max_rewards[self.config["env_config"]["env_name"]]
+        self.env.num_tasks = 1
+        self.config["env_config"]["action_size"] = self.env.action_size
+        self.config["env_config"]["observation_size"] = self.env.observation_size
+        self.config["env_config"]["episode_length"] = 1000
+        self.config["env_config"]["num_tasks"] = 1
 
     def save_params(self, training_state):
 
