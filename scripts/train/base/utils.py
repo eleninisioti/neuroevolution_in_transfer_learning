@@ -1,4 +1,4 @@
-default_env_params = {"n_parity_only_n": {"n_input": 4},
+default_env_params = {"n_parity": {"n_input": 6},
                       "simple_alu": {},
                       "halfcheetah": {},
                       "locomotion": {}}

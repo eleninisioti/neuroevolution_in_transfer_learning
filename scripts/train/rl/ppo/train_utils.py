@@ -4,7 +4,7 @@ import os
 import envs
 import pickle
 from scripts.train.rl.ppo.hyperparams import hyperparams
-from methods.brax.training.agents.ppo import train as ppo
+from methods.brax_wrapper.ppo import train as ppo
 from scripts.train.base.experiment import Experiment
 from functools import partial
 import numpy as onp
@@ -16,6 +16,8 @@ from scripts.train.base.utils import max_rewards
 from stepping_gates import envs as stepping_gates_envs
 from brax import envs as brax_envs
 from ecorobot import envs as ecorobot_envs
+from envs.stepping_gates.stepping_gates.envs.wrappers import wrap as dgates_wrap
+import wandb
 
 def _unpmap(v):
   return jax.tree_util.tree_map(lambda x: x[0], v)
@@ -29,7 +31,7 @@ class PPOExperiment(Experiment):
 
     def init_model(self):
 
-        train_fn = functools.partial(ppo.train,
+        train_fn = functools.partial(ppo,
                                      **self.config["model_config"]["model_params"],
                                      **hyperparams[self.config["env_config"]["env_name"]],
                                      episode_length=self.config["env_config"]["episode_length"],
@@ -93,8 +95,7 @@ class PPOExperiment(Experiment):
                 "generation": wandb_info["gen"],
                 "current_task": wandb_info["current_task"]
             }
-            for key, value in logging_info.items():
-                self.logger_run.track(value, name=key)
+            wandb.log(logging_info)
 
         total_eval_info = {
             "fitness": metrics["eval/episode_reward"],

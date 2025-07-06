@@ -1,13 +1,13 @@
 
 # ------ total training time -------
-train_timesteps = {"n_parity_only_n": 150_000_000,
+train_timesteps = {"n_parity": 150_000_000,
                    "simple_alu": 450_000_000,
                    "halfcheetah": 50_000_000,
                    "locomotion": 50_000_000}
 
 # ------ PPO hyperparams for brax implementation -------
 hyperparams = {
-    "n_parity_only_n": {"reward_scaling": 1,
+    "n_parity": {"reward_scaling": 1,
                  "unroll_length": 1,
                  "num_updates_per_batch": 4,
                  "discounting": 1.0,
@@ -62,7 +62,7 @@ hyperparams = {
 }
 
 # ------ neural network architecture for policy network. just MLPs ------
-arch = {"n_parity_only_n": {"num_layers": 6,
+arch = {"n_parity": {"num_layers": 6,
                      "num_neurons": 4},
         "simple_alu": {"num_layers": 6,
                      "num_neurons": 4},

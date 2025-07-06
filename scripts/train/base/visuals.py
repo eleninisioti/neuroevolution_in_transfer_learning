@@ -17,7 +17,6 @@ from bokeh.transform import linear_cmap
 import copy
 from matplotlib.colors import LinearSegmentedColormap
 from bokeh.io import export_png
-from aim import Run, Image
 
 
 

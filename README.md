@@ -3,7 +3,7 @@
 This is the code that accompanies our submission to GECCO 2025.
 It enables running the experiments reported in the paper and producing visualisations.
 
-## Installing package dependencies
+## Installing dependencies
 
 We have provided the library dependenices in the file [requirements.txt](requirements.txt). You can install them using [uv](https://docs.astral.sh/uv/) with the following command:
 
@@ -11,17 +11,16 @@ We have provided the library dependenices in the file [requirements.txt](require
 uv pip install requirements.txt
 ```
 
-You then need to install jax (we did not include it in the requirements.txt file due to an error complaining about package versions). We recommend sticking to the version that we used:
+Our study considered two benchmarks: [ecorobot](https://github.com/eleninisioti/ecorobot) and [stepping gates](https://github.com/eleninisioti/stepping_gates). These are standalone github repos.
+If you want to rerun training you will need to clone them under directory [envs](envs) using the following commands:
+
 
 ```
-uv pip install jax==0.4.26
+cd envs
+git clone https://github.com/eleninisioti/ecorobot
+git clone https://github.com/eleninisioti/stepping_gates
 ```
 
-or if you are planning to run on GPU 
-
-```
-uv pip install "jax[cuda12]==0.4.26"
-```
 
 ## Code overview
 This repo contains the following directories:
@@ -42,21 +41,6 @@ Alternatively, you can rerun training by calling the appropriate script from [sc
 Experiments are saved under directory [experiments](experiments). An experiment contains the trained policies and information about evaluation.
 
 To produce all paper visualisation you can run script [scripts/inspect/gecco_2025_visuals.py](scripts/inspect/gecco_2025_visuals.py). This will also print information regarding statistical significance.
-
-
-## Retraining
-
-
-Our study considered two benchmarks: [ecorobot](https://github.com/eleninisioti/ecorobot) and [stepping gates](https://github.com/eleninisioti/stepping_gates). These are standalone github repos.
-If you want to rerun training you will need to clone them under directory [envs](envs) using the following commands:
-
-
-```
-cd envs
-git clone https://github.com/eleninisioti/ecorobot
-git clone https://github.com/eleninisioti/stepping_gates
-```
-
 
 
 If you would like to cite our study, please use:

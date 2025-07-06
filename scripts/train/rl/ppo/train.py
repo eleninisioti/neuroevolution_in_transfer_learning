@@ -1,13 +1,9 @@
 """ Script for training Proximal Policy Optimisation"""
 import sys
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../..')))
-sys.path.insert(0, "methods")
-sys.path.insert(0, "scripts")
-
+sys.path.append(".")
 from scripts.train.rl.ppo.train_utils import PPOExperiment as Experiment
 import os
-import envs
 from scripts.train.base.utils import default_env_params
 from scripts.train.rl.ppo.hyperparams import train_timesteps, arch
 import argparse
@@ -112,9 +108,9 @@ def train_ecorobot(num_trials, env_name):
 
 
 def train_stepping_gates_all(num_trials):
-    train_stepping_gates(num_trials=num_trials, env_name="n_parity_only_n", curriculum=False)
-    train_stepping_gates(num_trials=num_trials, env_name="n_parity_only_n", curriculum=True)
-    train_stepping_gates(num_trials=num_trials, env_name="simple_alu", curriculum=True)
+    train_stepping_gates(num_trials=num_trials, env_name="n_parity", curriculum=False)
+    #train_stepping_gates(num_trials=num_trials, env_name="n_parity", curriculum=True)
+    #train_stepping_gates(num_trials=num_trials, env_name="simple_alu", curriculum=True)
 
 def train_brax_all(num_trials):
     train_brax(num_trials=num_trials, env_name="halfcheetah")
@@ -131,6 +127,6 @@ if __name__ == "__main__":
     parser.add_argument("--num_trials", type=int, help="Number of trials", default=10)
     args = parser.parse_args()
 
-    #train_stepping_gates_all(num_trials=args.num_trials)
-    train_brax_all(num_trials=args.num_trials)
+    train_stepping_gates_all(num_trials=args.num_trials)
+    #train_brax_all(num_trials=args.num_trials)
     #train_ecorobot_all(num_trials=args.num_trials)
