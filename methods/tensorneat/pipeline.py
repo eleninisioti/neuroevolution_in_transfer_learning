@@ -8,7 +8,6 @@ import numpy as np
 from tensorneat.algorithm import BaseAlgorithm
 from tensorneat.problem import BaseProblem
 from tensorneat.common import State, StatefulBaseClass
-import aim
 import wandb
 
 class Pipeline(StatefulBaseClass):

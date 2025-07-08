@@ -22,7 +22,7 @@ class Task:
             elif config["optimizer_config"]["optimizer_type"] == "evosax":
                 self.num_eval_trials = 1
             elif config["optimizer_config"]["optimizer_type"] == "brax":
-                self.num_eval_trials = 1000
+                self.num_eval_trials = 100
 
         elif config["env_config"]["env_type"] == "brax":
             self.num_eval_trials = 10
@@ -109,7 +109,7 @@ class Task:
                 trial_success.append(float(success / episode_length))
                 trial_rewards.append(float(cum_reward))
 
-                gif_path = self.env.show_rollout(states, saving_dir + "/task_" + str(task),
+                gif_path = self.env.show_rollout(states, save_dir=saving_dir + "/task_" + str(task),
                                                      filename="eval_trial_" + str(eval_trial) + "_final_" + str(final_policy) + "_rew_" + str(cum_reward))
 
             task_alias = "task_" + str(task)

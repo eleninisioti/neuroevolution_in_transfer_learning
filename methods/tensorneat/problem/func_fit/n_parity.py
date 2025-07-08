@@ -79,10 +79,10 @@ class Nparity(FuncFit):
     def output_shape(self):
         return jnp.arange(2 ** self.n_input), 1
 
-    def show_rollout(self, data, output_dir, filename):
+    def show_rollout(self, data, save_dir, filename):
         frame_paths = []
-        if not os.path.exists(output_dir + "/" + filename):
-            os.makedirs(output_dir + "/" + filename)
+        if not os.path.exists(save_dir + "/" + filename):
+            os.makedirs(save_dir + "/" + filename)
         for idx, frame_data in enumerate(data):
             fig, ax = plt.subplots(figsize=(12, 2))  # Adjust the size as needed
             ax.axis('off')  # Turn off axes
@@ -94,14 +94,14 @@ class Nparity(FuncFit):
 
             # Save the frame
 
-            frame_path = os.path.join(output_dir + "/" + filename, "step_" + str(idx) +".png")
+            frame_path = os.path.join(save_dir + "/" + filename, "step_" + str(idx) +".png")
             plt.tight_layout()
             plt.savefig(frame_path, bbox_inches='tight', dpi=150)
             frame_paths.append(frame_path)
             plt.close()
 
         # Create a GIF from the frames
-        gif_path = output_dir + "/" + filename+ ".gif"
+        gif_path = save_dir + "/" + filename+ ".gif"
         secs_per_step = 2
         with imageio.get_writer(gif_path, mode='I', duration=len(data)*secs_per_step) as writer:
             for frame_path in frame_paths:

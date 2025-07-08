@@ -162,8 +162,8 @@ class EcorobotEnv(RLEnv):
     def render(self, state, action):
         return self.env.render(state, action)
 
-    def show_rollout(self, states, saving_dir, filename):
-        return self.env.show_rollout(states, saving_dir, filename)
+    def show_rollout(self, states, save_dir, filename):
+        return self.env.show_rollout(states, save_dir, filename)
 
     @property
     def input_shape(self):

@@ -205,7 +205,7 @@ class EvosaxTrainer(BaseTrainer):
 
 		jax.lax.cond(jnp.max(fitness) >= self.reward_for_solved,
 					 lambda x: self.save_params_fn(x), lambda x: None,
-					 (new_task_params, x, interm_policies, jnp.argmax(fitness)))
+					 (state.gen_counter, new_task_params, x, interm_policies, jnp.argmax(fitness)))
 
 		f = self.fitness_shaper.apply(x, fitness)
 

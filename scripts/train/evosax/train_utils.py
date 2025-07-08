@@ -4,7 +4,6 @@ import os
 import envs
 import pickle
 from scripts.train.rl.ppo.hyperparams import hyperparams
-from methods.brax.training.agents.ppo import train as ppo
 from scripts.train.base.experiment import Experiment
 from functools import partial
 import numpy as onp
@@ -13,6 +12,8 @@ import jax
 from scripts.train.base.visuals import viz_histogram, viz_heatmap
 from scripts.train.rl.ppo.hyperparams import hyperparams
 from stepping_gates import envs as stepping_gates_envs
+from ecorobot import envs as ecorobot_envs
+from methods.evosax_wrapper.base.tasks.rl import EcorobotTask
 from methods.evosax_wrapper.direct_encodings.model import make_model
 import methods.evosax_wrapper.evosax
 from methods.evosax_wrapper.base.training.evolution import EvosaxTrainer
@@ -20,7 +21,7 @@ from methods.evosax_wrapper.base.training.logging  import Logger
 import equinox as eqx
 import evosax
 from methods.evosax_wrapper.base.tasks.rl import GatesTask
-
+import wandb
 
 
 def _unpmap(v):
@@ -38,7 +39,7 @@ class EvosaxExperiment(Experiment):
         self.model_key, self.train_key = jax.random.split(key, 2)
         
     def init_model(self):
-      self.model = make_model(self.config, self.model_key, logger_run=self.logger_run)
+      self.model = make_model(self.config, self.model_key)
 
     def cleanup(self):
         pass
@@ -54,21 +55,20 @@ class EvosaxExperiment(Experiment):
         self.config["env_config"]["observation_size"] = self.env.observation_size
         self.config["env_config"]["episode_length"] = self.env.episode_length
         self.config["env_config"]["num_tasks"] = self.env.num_tasks
+        
+    def setup_ecorobot_env(self):
+        self.env = ecorobot_envs.get_environment(env_name=self.config["env_config"]["env_name"],
+                                                      **self.config["env_config"]["env_params"])
+        
+        self.config["env_config"]["action_size"] = self.env.action_size
+        self.config["env_config"]["observation_size"] = self.env.observation_size
+        self.config["env_config"]["episode_length"] = self.env.episode_length
+        self.config["env_config"]["num_tasks"] = self.env.num_tasks
 
     
 
 
-    def save_params(self, training_state):
 
-        def callback(training_state):
-            env_params = training_state.env_params
-            current_task = jnp.ravel(env_params).astype(jnp.int32)[0]
-            with open(self.config["exp_config"]["trial_dir"] + "/data/train/checkpoints/params_task_" + str(current_task) + ".pkl",
-                      "wb") as f:
-                pickle.dump(        _unpmap(
-            (training_state.normalizer_params, training_state.params.policy)), f)
-
-        jax.debug.callback(callback, training_state)
 
 
     def metrics_fn(self, log_info,  data,task_params, num_nodes, num_edges):
@@ -89,16 +89,14 @@ class EvosaxExperiment(Experiment):
 
             }
 
-
-
-
+            wandb.log(log_info)
+            
             for key, value in log_info.items():
-                self.logger_run.track(value, name=key)
                 print(key, value)
 
         jax.debug.callback(callback, log_info, task_params, data, num_nodes, num_edges)
 
-    def eval_task(self, best_member, tasks, final_policy=False):
+    def eval_task(self, best_member, tasks, gens, final_policy=False):
 
         policy_params = self.params_shaper.reshape_single(best_member)
 
@@ -112,7 +110,7 @@ class EvosaxExperiment(Experiment):
         act_fn = partial(policy, key=self.model_key, state=init_policy_state, )
 
 
-        super().run_eval(act_fn, tasks, final_policy)
+        super().run_eval(act_fn, tasks, final_policy=final_policy, gens=gens)
 
    
     def get_final_policy(self):
@@ -144,11 +142,21 @@ class EvosaxExperiment(Experiment):
         self.statics = statics
         self.params_shaper = evosax.ParameterReshaper(params)
 
+    
+        """
         self.env = GatesTask(statics,
 
                         env=self.config["env_config"]["env_name"],
                         max_steps= self.config["env_config"]["episode_length"],
                         data_fn=data_fn, env_kwargs={**self.config["env_config"]["env_params"]})
+        """
+        
+        self.env = EcorobotTask(statics=self.statics,
+                                env=self.config["env_config"]["env_name"],
+                                max_steps=1000,
+                                data_fn=data_fn,
+                                env_kwargs={**self.config["env_config"]["env_params"]})
+        
 
 
 
@@ -159,8 +167,8 @@ class EvosaxExperiment(Experiment):
                                 params_shaper=self.params_shaper,
                                 popsize=self.config["optimizer_config"]["optimizer_params"]["popsize"],
                                 fitness_shaper=fitness_shaper,
-                                num_tasks = self.env.env.num_tasks,
-                                reward_for_solved=self.env.env.reward_for_solved,
+                                num_tasks = self.env.num_tasks,
+                                reward_for_solved=self.env.reward_for_solved,
                                 # sigma_init = 0.01,
                                 es_kws={
                                         },
@@ -178,7 +186,7 @@ class EvosaxExperiment(Experiment):
     def save_params(self, training_state):
 
         def callback(info):
-            current_task, state, interm_policies, best_indiv = info
+            current_gen, current_task, state, interm_policies, best_indiv = info
             last_dev_step = 1
             best_member = jax.tree_map(lambda x: x[best_indiv, ...], state)
 
@@ -186,7 +194,7 @@ class EvosaxExperiment(Experiment):
             if not os.path.exists(file_path):
 
                 with open(file_path, "wb") as f:
-                    pickle.dump( best_member, f)
+                    pickle.dump( (current_gen,best_member), f)
 
 
             interm_policies = jax.tree_map(lambda x: x[best_indiv,0, ...], interm_policies)

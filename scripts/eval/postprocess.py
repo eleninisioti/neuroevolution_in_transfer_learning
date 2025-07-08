@@ -78,7 +78,7 @@ if __name__ == "__main__":
     
     
     parser = argparse.ArgumentParser(description="Postprocess evaluation results.")
-    parser.add_argument("--project_dir", type=str, help="Path to the project directory.", default="projects/alife_2025/n_parity/no_curric/neat_4/")
+    parser.add_argument("--project_dir", type=str, help="Path to the project directory.", default="projects/benchmarking/2025_07_06/stepping_gates_n_parity_n_input_2_episode_type_one-step_curriculum_False/brax_ppo/num_timesteps_5000000/MLP_num_layers_6_num_neurons_4")
     args = parser.parse_args()
 
     project_dir = args.project_dir    

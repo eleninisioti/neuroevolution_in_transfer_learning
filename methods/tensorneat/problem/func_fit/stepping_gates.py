@@ -78,7 +78,8 @@ class Nparity(FuncFit):
     def output_shape(self):
         return jnp.arange(2 ** self.n_input), 1
 
-    def show_rollout(self, data, output_dir, filename):
+    def show_rollout(self, data, save_dir, filename):
+        output_dir = save_dir 
         frame_paths = []
         if not os.path.exists(output_dir + "/" + filename):
             os.makedirs(output_dir + "/" + filename)

@@ -13,6 +13,7 @@ import os
 from  methods.tensorneat.pipeline import Pipeline
 from methods.tensorneat.problem.func_fit.n_parity import Nparity
 from  methods.tensorneat.problem.rl.gates_env import GatesEnv
+from  methods.tensorneat.problem.rl.ecorobot_env import EcorobotEnv
 import numpy as onp
 from collections import defaultdict
 import json
@@ -29,6 +30,19 @@ class TensorneatExperiment(Experiment):
     def setup_stepping_gates_env(self):
 
         self.env = GatesEnv(self.config["env_config"])
+
+
+        self.config["env_config"]["action_size"] = self.env.action_size
+        self.config["env_config"]["observation_size"] = self.env.observation_size
+        self.config["env_config"]["episode_length"] = self.env.episode_length
+        self.config["env_config"]["num_tasks"] = self.env.num_tasks
+
+
+        return self.env
+    
+    def setup_ecorobot_env(self):
+
+        self.env = EcorobotEnv(self.config["env_config"])
 
 
         self.config["env_config"]["action_size"] = self.env.action_size

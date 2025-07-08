@@ -251,13 +251,20 @@ def train(
           action_repeat=action_repeat,
           randomization_fn=v_randomization_fn,
       )
-  reset_fn = jax.jit(jax.vmap(env.reset, in_axes=(0, None)))
-  key_envs = jax.random.split(key_env, num_envs // process_count)
+  key_envs = jax.random.split(key_env, num_envs)
   key_envs = jnp.reshape(key_envs,
                          (local_devices_to_use, -1) + key_envs.shape[1:])
 
   init_env_params = jnp.zeros((1,)).astype(jnp.int32)
-  env_state = reset_fn(key_envs, init_env_params)
+  
+  if isinstance(environment, envs.Env):
+    reset_fn = jax.jit(jax.vmap(env.reset, in_axes=(0)))
+
+    env_state = reset_fn(key_envs)
+  else:
+    reset_fn = jax.jit(jax.vmap(env.reset, in_axes=(0, None)))
+
+    env_state = reset_fn(key_envs, init_env_params)
 
   normalize = lambda x, y: x
   if normalize_observations:
@@ -598,12 +605,14 @@ def train(
 
 
       def change_task(env_params):
-          new_task = jnp.minimum(env_params[0][0] + 1, env.num_tasks+1).astype(jnp.int32)
+          new_task = jnp.minimum(env_params[0][0] + 1, env.num_tasks).astype(jnp.int32)
           return jnp.array([[new_task]])
 
 
-      new_env_params = jax.lax.cond(metrics["eval/episode_reward"] >= env.reward_for_solved, lambda x: change_task(x), lambda x: x, training_state.env_params)
-      print(metrics["eval/episode_reward"])
+      new_env_params = jax.lax.cond(metrics["eval/episode_reward"] >= env.reward_for_solved,
+                                    lambda x: change_task(x), lambda x: x,
+                                    training_state.env_params)
+      
 
       if metrics["eval/episode_reward"] >= env.reward_for_solved:
           save_params_fn( training_state)

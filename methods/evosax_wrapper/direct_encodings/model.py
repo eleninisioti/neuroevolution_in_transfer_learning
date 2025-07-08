@@ -23,17 +23,15 @@ class MLP(eqx.Module):
     action_dims: int
     obs_dims: int
     mlp: Optional[jax.Array]
-    logger_run:  int
     max_nodes: int
 
     #norm_data: Optional[jax.Array]
     #pretrained_params: Optional[jax.Array]
 
-    def __init__(self,  action_dims, obs_dims,*, key: jax.Array, logger_run, max_nodes):
+    def __init__(self,  action_dims, obs_dims,*, key: jax.Array, max_nodes):
 
         self.action_dims = action_dims
         self.obs_dims = obs_dims
-        self.logger_run = logger_run
         self.max_nodes = max_nodes
         self.mlp = nn.MLP(obs_dims,
                           action_dims,
@@ -100,16 +98,14 @@ class RNN(eqx.Module):
     obs_dims: int
     weights: Optional[jax.Array]
     policy_iters: int
-    logger_run:  int
     #norm_data: Optional[jax.Array]
     #pretrained_params: Optional[jax.Array]
 
-    def __init__(self,  action_dims, obs_dims, total_nodes, *, key: jax.Array, logger_run):
+    def __init__(self,  action_dims, obs_dims, total_nodes, *, key: jax.Array ):
 
         self.action_dims = action_dims
         self.obs_dims = obs_dims
         self.policy_iters = 5
-        self.logger_run = logger_run
         self.weights = jr.normal(key, (total_nodes,
                                        total_nodes))  # self.mlp = nn.MLP(8, action_dims, 32, 4, activation=linen.swish, final_activation=lambda x: x,
 
@@ -151,7 +147,7 @@ class RNN(eqx.Module):
         state = state._replace(rnn_state=h)
         return a, state
 
-def make_model(config, key, logger_run):
+def make_model(config, key):
     """ Creates a direct encoding
     """
 
@@ -166,7 +162,6 @@ def make_model(config, key, logger_run):
         model = MLP( key=key_model,
                      obs_dims=input_size,
                      action_dims=action_size,
-                     logger_run=logger_run,
                      max_nodes=max_nodes
                     )
     elif config["model_config"]["network_type"] == "RNN":
@@ -175,7 +170,6 @@ def make_model(config, key, logger_run):
                     obs_dims=input_size,
                     action_dims=action_size,
                     total_nodes=max_nodes,
-                    logger_run=logger_run
                     )
 
     return model

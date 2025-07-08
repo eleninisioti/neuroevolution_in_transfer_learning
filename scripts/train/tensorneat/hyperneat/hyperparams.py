@@ -1,10 +1,28 @@
 
 # ------ total training time -------
-train_gens = {"n_parity_only_n": 5000,
-                   "simple_alu": 10000}
+train_gens = {"n_parity": 5000,
+              "n_parity_only_n": 5000,
+                   "simple_alu": 10000,
+                   "deceptive_maze_easy": 1000,
+                   "maze_with_stepping_stones": 100,
+                   "locomotion_with_obstacles": 1000,
+                   "locomotion": 2000,
+                   "deceptive_maze": 1000}
 
 # ------ PPO hyperparams for brax implementation -------
 hyperparams = {
+    "n_parity": {"num_hidden_neurons_per_layer": 16,
+                        "num_hidden_layers": 1,
+                        "mut_node": 0.1,
+                        "mut_conn": 0.1,
+                        "max_nodes": 100,
+                        "node_add": 0.1,
+                        "conn_add": 0.2,
+                        "cppn_max_nodes": 100,
+                        "cppn_max_conns": 1000,
+                        "node_delete": 0.1,
+                        "conn_delete": 0.2
+                 },
     "n_parity_only_n": {"num_hidden_neurons_per_layer": 16,
                         "num_hidden_layers": 1,
                         "mut_node": 0.1,
@@ -29,7 +47,66 @@ hyperparams = {
                         "node_delete": 0.1,
                         "conn_delete": 0.2
                  },
+    "deceptive_maze_easy": {"num_hidden_neurons_per_layer": 16,
+                            "num_hidden_layers": 1,
+                            "mut_node": 0.1,
+                            "mut_conn": 0.1,
+                            "max_nodes": 100,
+                            "node_add": 0.1,
+                            "conn_add": 0.2,
+                            "cppn_max_nodes": 100,
+                            "cppn_max_conns": 1000,
+                            "node_delete": 0.1,
+                            "conn_delete": 0.2
+                 },
+    "maze_with_stepping_stones": {"num_hidden_neurons_per_layer": 16,
+                                  "num_hidden_layers": 1,
+                                  "mut_node": 0.1,
+                                  "mut_conn": 0.1,
+                                  "max_nodes": 100,
+                                  "node_add": 0.1,                    
+                                  "conn_add": 0.2,
+                                  "cppn_max_nodes": 100,
+                                  "cppn_max_conns": 1000,
+                                  "node_delete": 0.1,
+                                  "conn_delete": 0.2
+                 },
+    "locomotion_with_obstacles": {"num_hidden_neurons_per_layer": 16,
+                                  "num_hidden_layers": 1,
+                                  "mut_node": 0.1,
+                                  "mut_conn": 0.1,
+                                  "max_nodes": 100,
+                                  "node_add": 0.1,
+                                  "conn_add": 0.2, 
+                                  "cppn_max_nodes": 100,
+                                  "cppn_max_conns": 1000,
+                                  "node_delete": 0.1,
+                                  "conn_delete": 0.2
+                 },
+    "locomotion": {"num_hidden_neurons_per_layer": 16,
+                   "num_hidden_layers": 1,
+                   "mut_node": 0.1,
+                   "mut_conn": 0.1,
+                   "max_nodes": 100,
+                   "node_add": 0.1,
+                   "conn_add": 0.2,
+                   "cppn_max_nodes": 100,
+                   "cppn_max_conns": 1000,
+                   "node_delete": 0.1,
+                   "conn_delete": 0.2
+                 },
+    "deceptive_maze": {"num_hidden_neurons_per_layer": 16,
+                       "num_hidden_layers": 1,
+                       "mut_node": 0.1,
+                       "mut_conn": 0.1,
+                       "max_nodes": 100,
+                       "node_add": 0.1,
+                       "conn_add": 0.2,
+                       "cppn_max_nodes": 100,
+                       "cppn_max_conns": 1000,
+                       "node_delete": 0.1,
+                       "conn_delete": 0.2
+                 }
 }
-
 
 

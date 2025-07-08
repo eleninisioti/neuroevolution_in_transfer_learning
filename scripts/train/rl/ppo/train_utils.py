@@ -33,7 +33,7 @@ class PPOExperiment(Experiment):
 
         train_fn = functools.partial(ppo,
                                      **self.config["model_config"]["model_params"],
-                                     **hyperparams[self.config["env_config"]["env_name"]],
+                                     **hyperparams[(self.config["env_config"]["env_name"])],
                                      episode_length=self.config["env_config"]["episode_length"],
                                      num_timesteps=self.config["optimizer_config"]["optimizer_params"]["num_timesteps"],
                                      seed=self.config["exp_config"]["trial_seed"])
@@ -54,7 +54,8 @@ class PPOExperiment(Experiment):
         
     def setup_brax_env(self):
         self.env = brax_envs.get_environment(env_name=self.config["env_config"]["env_name"],
-                                                      **self.config["env_config"]["env_params"])
+                                                      **self.config["env_config"]["env_params"],
+                                                      backend="mjx")
         self.env.reward_for_solved = max_rewards[self.config["env_config"]["env_name"]]
         self.env.num_tasks = 1
         self.config["env_config"]["action_size"] = self.env.action_size
@@ -81,7 +82,7 @@ class PPOExperiment(Experiment):
             with open(self.config["exp_config"]["trial_dir"] + "/data/train/checkpoints/params_task_" + str(current_task) + ".pkl",
                       "wb") as f:
                 pickle.dump(        _unpmap(
-            (training_state.normalizer_params, training_state.params.policy)), f)
+            (training_state.env_steps,training_state.normalizer_params, training_state.params.policy)), f)
 
         jax.debug.callback(callback, training_state)
 
@@ -102,8 +103,11 @@ class PPOExperiment(Experiment):
             "gen": gen,
             "current_task": env_params[0][0]}
         log(total_eval_info)
+        
+        print("current best fitness: ", total_eval_info["fitness"])
+        print("current task: ", total_eval_info["current_task"])
 
-    def eval_task(self, policy_params, tasks, final_policy=False):
+    def eval_task(self, policy_params, tasks, gens, final_policy=False):
         inference_fn = self.final_state["inference_fn"](policy_params)
 
         act_fn = partial(jax.jit(inference_fn), key_sample=jax.random.PRNGKey(0))
@@ -128,7 +132,7 @@ class PPOExperiment(Experiment):
         width = 0
         height = 0
         kernels = []
-        for el in params[1]["params"].values():
+        for el in params["params"].values():
             kernel = onp.array(el["kernel"])
             bias = onp.array(el["bias"])
             # kernel = onp.vstack((kernel, bias))
@@ -148,13 +152,13 @@ class PPOExperiment(Experiment):
 
         # process bias
         width = 0
-        for el in params[1]["params"].values():
+        for el in params["params"].values():
             kernel = el["bias"]
             width += kernel.shape[0]
         width = width + self.env.observation_size
         bias = jnp.zeros((width,))
         start_x = 0
-        for el in params[1]["params"].values():
+        for el in params["params"].values():
             bias = bias.at[start_x:start_x + el["bias"].shape[0]].set(el["bias"])
             start_x += el["bias"].shape[0]
 
@@ -165,10 +169,15 @@ class PPOExperiment(Experiment):
         #weights = onp.hstack((onp.zeros((width + 1, 1)), weights))
         return weights
     
+    def get_params(self, f):
+        gens, normalizer_params, params = pickle.load(f)
+        return gens, (normalizer_params, params)
+
+    
     def save_training_info(self):
 
         # weights = self._map_to_adjacency_matrix(conns)
-        params = self.final_state["params"]
+        params = self.final_state["params"][1]
         weights = self.params_to_weights(params)
     
         viz_heatmap(weights,
@@ -180,7 +189,7 @@ class PPOExperiment(Experiment):
         for task in range(num_tasks):
             with open(self.config["exp_config"]["trial_dir"] + "/data/train/checkpoints/params_task_" + str(
                     task) + ".pkl","rb") as f:
-                params = pickle.load(f)
+                _, normalizer_params, params = pickle.load(f)
                 task_weights = self.params_to_weights(params)
                 checkpoint_weights.append(task_weights)
                 

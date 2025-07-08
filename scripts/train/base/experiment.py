@@ -43,7 +43,7 @@ class Experiment:
             f"{key}_{value}" for key, value in self.config["optimizer_config"]["optimizer_params"].items())
 
         project_dir = "projects/benchmarking/" + datetime.today().strftime(
-            '%Y_%m_%d') + "/" + self.env_alias + "/" + self.opt_alias + "/" + self.model_alias + "_withgraph"
+            '%Y_%m_%d') + "/" + self.env_alias + "/" + self.opt_alias + "/" + self.model_alias 
 
         print("Saving project under " + project_dir)
 
@@ -205,6 +205,8 @@ class Experiment:
         with open(self.config["exp_config"]["trial_dir"] + "/data/train/final_policy.pkl", "wb") as f:
             pickle.dump(self.training_info, f)
 
+    def get_params(self, f):
+        return pickle.load(f)
 
     def eval_trial(self):
         top_dir = self.config["exp_config"]["trial_dir"] + "/data/train/checkpoints/"
@@ -214,14 +216,15 @@ class Experiment:
 
             if params_file in param_files:
                 with open(os.path.join(top_dir, params_file), "rb") as f:
-                    gens, params = pickle.load(f)
+                    
+                    gens, params = self.get_params(f)
                     self.eval_task(params, gens=gens, tasks=[task])
 
             else:
                 print("Task " + str(task) + " has not been solved so not running evaluation for it")
 
         params = self.final_state["params"]
-        self.eval_task(params, tasks=range(self.task.num_tasks), final_policy=True)
+        self.eval_task(params, gens=-1,tasks=range(self.task.num_tasks), final_policy=True)
 
         with open(self.config["exp_config"]["trial_dir"] + "/data/eval/info.yml", "w") as f:
             yaml.dump(self.task.eval_info, f)

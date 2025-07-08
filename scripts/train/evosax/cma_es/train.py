@@ -50,16 +50,55 @@ def train_stepping_gates(num_trials, env_name, curriculum):
     exp.run()
 
 
+def train_ecorobot(num_trials, env_name, robot_type):
+
+    # configure experiment
+    exp_config = {"seed": 0,
+                  "num_trials": num_trials}
+    
+    # configure environment
+    env_params = default_env_params[env_name]
+    env_params["episode_type"] = "full"
+    env_params["curriculum"] = False
+    env_config = {"env_type": "ecorobot",
+                  "env_name": env_name,
+                  "curriculum": False,
+                  "env_params": {"robot_type": robot_type}}
+    
+    
+    # configure method
+    num_timesteps = train_gens[env_name]
+    optimizer_config = {"optimizer_name": "cma_es",
+                        "optimizer_type": "evosax",
+                        "optimizer_params": {"generations": num_timesteps,
+                                             "strategy": "CMA_ES",
+                                             "popsize": 256}}
+    
+    model_config = {"network_type": "MLP",
+                    "model_params": hyperparams[env_name]}
 
 
-def train_all(num_trials):
-    train_stepping_gates(num_trials=num_trials, env_name="n_parity_only_n", curriculum=False)
+    exp = Experiment(env_config=env_config,
+                     optimizer_config=optimizer_config,
+                     model_config = model_config,
+                     exp_config=exp_config)
+    exp.run()
+
+def train_stepping_gates_all(num_trials):
+    train_stepping_gates(num_trials=num_trials, env_name="n_parity", curriculum=False)
     train_stepping_gates(num_trials=num_trials, env_name="n_parity_only_n", curriculum=True)
     train_stepping_gates(num_trials=num_trials, env_name="simple_alu", curriculum=True)
 
 
 
+def train_ecorobot_all(num_trials):
+    #train_ecorobot(num_trials=num_trials, env_name="locomotion", robot_type="halfcheetah")
+    #train_ecorobot(num_trials=num_trials, env_name="locomotion", robot_type="ant")
+    #train_ecorobot(num_trials=num_trials, env_name="maze_with_stepping_stones", robot_type="discrete_fish")
 
+    #train_ecorobot(num_trials=num_trials, env_name="locomotion_with_obstacles", robot_type="halfcheetah")
+    train_ecorobot(num_trials=num_trials, env_name="deceptive_maze_easy", robot_type="discrete_fish")
+    train_ecorobot(num_trials=num_trials, env_name="deceptive_maze_easy", robot_type="ant")
 
 
     
@@ -67,7 +106,8 @@ def train_all(num_trials):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="This script trains Proximal Policy Optimisation on the stepping gates and ecorobot benchmarks")
-    parser.add_argument("--num_trials", type=int, help="Number of trials", default=10)
+    parser.add_argument("--num_trials", type=int, help="Number of trials", default=5)
     args = parser.parse_args()
 
-    train_all(num_trials=args.num_trials)
+    #train_stepping_gates_all(num_trials=args.num_trials)
+    train_ecorobot_all(num_trials=args.num_trials)

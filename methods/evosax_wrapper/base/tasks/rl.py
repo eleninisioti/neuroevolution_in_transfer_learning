@@ -7,7 +7,7 @@ import equinox as eqx
 from stepping_gates import envs as gate_envs
 #from simple import envs as simple_envs
 from brax import envs as brax_envs
-
+from ecorobot import envs as ecorobot_envs
 from brax.envs import Env
 #from brax import envs as brax_envs
 from jaxtyping import Float, PyTree
@@ -28,6 +28,87 @@ class State(NamedTuple):
 #=======================================================================
 #=======================================================================
 #=======================================================================
+class EcorobotTask(eqx.Module):
+	"""
+	"""
+	#-------------------------------------------------------------------
+	env: BraxEnv
+	statics: PyTree[...]
+	max_steps: int	
+	num_tasks: int
+	current_task: int
+	reward_for_solved: float
+	data_fn: Callable[[PyTree], dict]
+ 
+	#-------------------------------------------------------------------
+	def __init__(
+		self, 
+		statics: PyTree[...],
+		env: Union[str, BraxEnv],
+		max_steps: int,
+		backend: str="mjx",
+		data_fn: Callable=lambda x: x, 
+		env_kwargs: dict={}):
+
+		if isinstance(env, str):
+			self.env = ecorobot_envs.get_environment(env_name=env, backend=backend, **env_kwargs)
+		else:
+			self.env = env
+
+		self.statics = statics
+		self.max_steps = max_steps
+		self.data_fn = data_fn
+		self.num_tasks = 1
+		self.reward_for_solved = 5000
+		self.current_task = 0
+
+
+	def __call__(
+		self, 
+		params: Params, 
+		key: jax.Array, 
+		task_params: Optional[TaskParams]=None,
+			current_gen: int=0)->Tuple[Float, PyTree]:
+
+		_, _, data, policy_states= self.rollout(params, key)
+		return jnp.sum(data["reward"]), data, policy_states, 0.0
+
+ 
+	def initialize(self, key: jax.Array, target_function=None) -> EnvState:
+
+		return self.env.reset(key)
+
+	def rollout(
+		self, 
+		params: Params, 
+		key: jax.Array, 
+		task_params: Optional[TaskParams]=None)->Tuple[State, State, dict]:
+
+		init_env_key, init_policy_key, rollout_key = jr.split(key, 3)
+		policy = eqx.combine(params, self.statics)
+
+		policy_state, policy_states = policy.initialize(init_policy_key)
+		env_state = self.initialize(init_env_key)
+		init_state = State(env_state=env_state, policy_state=policy_state)
+
+		obs_size = self.env.observation_size
+		action_size = self.env.action_size
+
+		def env_step(carry, x):
+			state, key = carry
+			key, _key = jr.split(key)
+			action, policy_state = policy(state.env_state.obs, state.policy_state, _key,obs_size=obs_size,action_size=action_size)
+			env_state = self.env.step(state.env_state, action)
+			new_state = State(env_state=env_state, policy_state=policy_state)
+			
+			return [new_state, key], (state, action)
+
+		[state, _], (states, actions) = jax.lax.scan(env_step, [init_state, rollout_key], None, self.max_steps)	
+		data = {"policy_states": states.policy_state, "obs": states.env_state.obs}
+		data = self.data_fn(data)
+		data["reward"] = states.env_state.reward
+		data["actions"]  = actions
+		return state, states, data, policy_states
 
 class BraxTask(eqx.Module):
 	
