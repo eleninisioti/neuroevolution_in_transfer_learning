@@ -6,27 +6,27 @@ This is the code that accompanies [our paper at GECCO 2025](https://dl.acm.org/d
 
 <div style="display: flex; gap: 20px; justify-content: center;">
   <div style="text-align: center;">
-    <img src="media/output.gif" alt="Demo" width="300"/>
+    <img src="media/output.gif" alt="Demo" width="200"/>
   </div>
   <div style="text-align: center;">
-    <img src="media/ecorobot.gif" alt="Demo" width="300"/>
+    <img src="media/ecorobot.gif" alt="Demo" width="200"/>
   </div>
 </div>
 
 <div style="display: flex; gap: 20px; justify-content: center; margin-top: 20px;">
   <div style="text-align: center;">
-    <img src="media/gates_perf.png" alt="Gates Performance" width="300"/>
+    <img src="media/gates_perf.png" alt="Gates Performance" width="200"/>
   </div>
   <div style="text-align: center;">
-    <img src="media/obstacles_perf.png" alt="Obstacles Performance" width="300"/>
+    <img src="media/obstacles_perf.png" alt="Obstacles Performance" width="200"/>
   </div>
 </div>
 
 <div style="display: flex; gap: 20px; justify-content: center; margin-top: 10px;">
-  <div style="text-align: center; width: 300px;">
+  <div style="text-align: center; width: 200px;">
     <p><em>Stepping Gates Benchmark</em></p>
   </div>
-  <div style="text-align: center; width: 300px;">
+  <div style="text-align: center; width: 200px;">
     <p><em>EcoRobot Benchmark</em></p>
   </div>
 </div>
