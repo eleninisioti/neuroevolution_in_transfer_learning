@@ -1,7 +1,7 @@
-train_gens = {"n_parity": 5000,
+train_gens = {"n_parity": 5,
               "n_parity_only_n": 5000,
                    "simple_alu": 10000,
-                   "maze_with_stepping_stones": 1000,
+                   "maze_with_stepping_stones": 4000,
                    "locomotion_with_obstacles": 1000,
                    "locomotion": 2000,
                    "deceptive_maze_easy": 100}

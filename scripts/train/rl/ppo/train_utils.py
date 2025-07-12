@@ -79,10 +79,13 @@ class PPOExperiment(Experiment):
         def callback(training_state):
             env_params = training_state.env_params
             current_task = jnp.ravel(env_params).astype(jnp.int32)[0]
+            weights = self.params_to_weights(jax.tree_util.tree_map(lambda x: x[0,...], training_state.params.policy))
             with open(self.config["exp_config"]["trial_dir"] + "/data/train/checkpoints/params_task_" + str(current_task) + ".pkl",
                       "wb") as f:
-                pickle.dump(        _unpmap(
-            (training_state.env_steps,training_state.normalizer_params, training_state.params.policy)), f)
+                pickle.dump(( _unpmap(training_state.env_steps),
+                             _unpmap(training_state.normalizer_params),
+                             weights,
+                             _unpmap(training_state.params.policy)), f)
 
         jax.debug.callback(callback, training_state)
 
@@ -170,7 +173,7 @@ class PPOExperiment(Experiment):
         return weights
     
     def get_params(self, f):
-        gens, normalizer_params, params = pickle.load(f)
+        gens, normalizer_params, weights_array, params = pickle.load(f)
         return gens, (normalizer_params, params)
 
     
@@ -189,11 +192,11 @@ class PPOExperiment(Experiment):
         for task in range(num_tasks):
             with open(self.config["exp_config"]["trial_dir"] + "/data/train/checkpoints/params_task_" + str(
                     task) + ".pkl","rb") as f:
-                _, normalizer_params, params = pickle.load(f)
-                task_weights = self.params_to_weights(params)
-                checkpoint_weights.append(task_weights)
+                _, normalizer_params, weights_array, params = pickle.load(f)
+                #task_weights = self.params_to_weights(params)
+                checkpoint_weights.append(weights_array)
                 
-                viz_heatmap(task_weights,
+                viz_heatmap(weights_array,
                     filename=self.config["exp_config"]["trial_dir"] + "/visuals/train/policy/task_" + str(task))
 
 

@@ -387,3 +387,127 @@ class DefaultGenome(BaseGenome):
             )
         # Only save the figure if no axes was provided
         return G
+
+    def visualize_custom(
+        self,
+        network,
+        no_plot=False,
+        rotate=0,
+        reverse_node_order=False,
+        size=(300, 300, 300),
+        color=("yellow", "white", "blue"),
+        with_labels=False,
+        edgecolors="k",
+        arrowstyle="->",
+        arrowsize=3,
+        save_path="network_custom.png",
+        save_dpi=300,
+        **kwargs,
+    ):
+        import networkx as nx
+        import matplotlib.pyplot as plt
+        import numpy as np
+        from matplotlib import cm
+        from matplotlib.colors import Normalize
+
+        conns_list = list(network["conns"])
+        input_idx = self.get_input_idx()
+        output_idx = self.get_output_idx()
+
+        topo_order, topo_layers = network["topo_order"], network["topo_layers"]
+        node2layer = {
+            node: layer for layer, nodes in enumerate(topo_layers) for node in nodes
+        }
+        if reverse_node_order:
+            topo_order = topo_order[::-1]
+
+        G = nx.DiGraph()
+
+        if not isinstance(size, tuple):
+            size = (size, size, size)
+        if not isinstance(color, tuple):
+            color = (color, color, color)
+
+        # Build a mapping from node to subset index for multipartite layout
+        layered_nodes = []
+        if input_idx:
+            layered_nodes.append(list(input_idx))
+        for layer in topo_layers:
+            # Exclude input and output nodes from hidden layers
+            hidden = [n for n in layer if n not in input_idx and n not in output_idx]
+            if hidden:
+                layered_nodes.append(hidden)
+        if output_idx:
+            layered_nodes.append(list(output_idx))
+
+        node_to_subset = {}
+        for subset_idx, nodes_in_layer in enumerate(layered_nodes):
+            for n in nodes_in_layer:
+                node_to_subset[n] = subset_idx
+
+        for node in topo_order:
+            subset = node_to_subset.get(node, 0)
+            if node in input_idx:
+                G.add_node(node, subset=subset, size=size[0], color=color[0])
+            elif node in output_idx:
+                G.add_node(node, subset=subset, size=size[2], color=color[2])
+            else:
+                G.add_node(node, subset=subset, size=size[1], color=color[1])
+
+        edge_weights = []
+        for conn in network["conns"].values():
+            G.add_edge(conn["in"], conn["out"], weight=conn["weight"])
+            edge_weights.append(conn["weight"])
+
+        # Remove nodes with degree 0 (disconnected nodes)
+        disconnected = [n for n, d in G.degree() if d == 0]
+        G.remove_nodes_from(disconnected)
+
+        cmap = cm.get_cmap('RdYlGn')
+        norm = Normalize(vmin=min(edge_weights), vmax=max(edge_weights))
+
+        pos = nx.multipartite_layout(G, scale=3)
+        def rotate_layout(pos, angle):
+            angle_rad = np.deg2rad(angle)
+            cos_angle, sin_angle = np.cos(angle_rad), np.sin(angle_rad)
+            rotated_pos = {}
+            for node, (x, y) in pos.items():
+                rotated_pos[node] = (
+                    cos_angle * x - sin_angle * y,
+                    sin_angle * x + cos_angle * y,
+                )
+            return rotated_pos
+        rotated_pos = rotate_layout(pos, rotate)
+
+        node_sizes = [n["size"] for n in G.nodes.values()]
+        node_colors = [n["color"] for n in G.nodes.values()]
+
+        max_weight = max(abs(w) for w in edge_weights) if edge_weights else 1
+        fig, ax = plt.subplots(figsize=(12, 8))
+        nx.draw_networkx_nodes(
+            G, pos=rotated_pos, node_size=node_sizes, node_color=node_colors,
+            edgecolors='black', ax=ax
+        )
+
+        for src, dst, data in G.edges(data=True):
+            weight = data['weight']
+            width = 1 + 3 * np.log1p(abs(weight))
+            alpha = min(1.0, 0.2 + 0.8 * (abs(weight) / max_weight if max_weight else 0))
+            color = cmap(norm(weight))
+            color = (color[0], color[1], color[2], alpha)  # RGBA with scaled alpha
+            nx.draw_networkx_edges(
+                G, pos=rotated_pos, edgelist=[(src, dst)],
+                edge_color=[color], width=width, alpha=1.0, ax=ax,
+                connectionstyle='arc3,rad=0.2'
+            )
+
+        # Add colorbar for edge weights
+        sm = cm.ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array([])
+        cbar = plt.colorbar(sm, ax=ax, fraction=0.03, pad=0.04)
+        cbar.set_label('Edge weight (red: negative, green: positive)', fontsize=12)
+
+        ax.axis('off')
+        fig.tight_layout()
+        fig.savefig(save_path, dpi=save_dpi, bbox_inches='tight')
+        plt.close(fig)

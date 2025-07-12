@@ -156,7 +156,7 @@ class EvosaxExperiment(Experiment):
                                 max_steps=1000,
                                 data_fn=data_fn,
                                 env_kwargs={**self.config["env_config"]["env_params"]})
-        
+       
 
 
 

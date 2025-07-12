@@ -224,6 +224,7 @@ class GatesTask(eqx.Module):
 	num_tasks: int
 	current_task: int
 	data_fn: Callable[[PyTree], dict]
+	reward_for_solved: float
 
 	# -------------------------------------------------------------------
 
@@ -244,6 +245,7 @@ class GatesTask(eqx.Module):
 		self.max_steps = max_steps
 		self.data_fn = data_fn
 		self.current_task = self.env.current_task
+		self.reward_for_solved = self.env.max_reward
 
 	# -------------------------------------------------------------------
 

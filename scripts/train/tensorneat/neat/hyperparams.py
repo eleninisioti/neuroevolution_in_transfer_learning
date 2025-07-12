@@ -3,8 +3,8 @@
 train_gens = {"n_parity": 5000,
               "n_parity_only_n": 5000,
                    "simple_alu": 10000,
-                   "maze_with_stepping_stones": 1000,
-                   "locomotion_with_obstacles": 200,
+                   "maze_with_stepping_stones": 2000,
+                   "locomotion_with_obstacles": 500,
                    "locomotion": 2000,
                    "deceptive_maze_easy": 100}
 

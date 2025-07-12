@@ -125,7 +125,8 @@ class NEATExperiment(TensorneatExperiment):
         network = self.model.genome.network_dict(self.final_state["state"],  *self.final_state["params"])
         plt.clf()
 
-        graph = self.model.genome.visualize(network, save_path=self.config["exp_config"]["trial_dir"]  + "/visuals/train/policy/policy_network.svg")
+        graph = self.model.genome.visualize(network,
+                                            save_path=self.config["exp_config"]["trial_dir"]  + "/visuals/train/policy/policy_network.png")
         plt.clf()
         adj_matrix = nx.to_numpy_array(graph, weight="weight")
 
