@@ -108,7 +108,7 @@ def train_ecorobot(num_trials, env_name, robot_type):
 
 
 def train_stepping_gates_all(num_trials):
-    #train_stepping_gates(num_trials=num_trials, env_name="n_parity", curriculum=False)
+    train_stepping_gates(num_trials=num_trials, env_name="n_parity", curriculum=False)
     train_stepping_gates(num_trials=num_trials, env_name="n_parity_only_n", curriculum=True)
     train_stepping_gates(num_trials=num_trials, env_name="simple_alu", curriculum=True)
 
@@ -121,13 +121,12 @@ def train_brax_all(num_trials):
     
     
 def train_ecorobot_all(num_trials):
-    #train_ecorobot(num_trials=num_trials, env_name="locomotion", robot_type="halfcheetah")
-    #train_ecorobot(num_trials=num_trials, env_name="locomotion", robot_type="ant")
-    #train_ecorobot(num_trials=num_trials, env_name="locomotion_with_obstacles", robot_type="halfcheetah")
-    #train_ecorobot(num_trials=num_trials, env_name="deceptive_maze_easy", robot_type="ant")
-    #train_ecorobot(num_trials=num_trials, env_name="deceptive_maze_easy", robot_type="discrete_fish")
-
-    train_ecorobot(num_trials=num_trials, env_name="maze_with_stepping_stones", robot_type="discrete_fish")
+    train_ecorobot(num_trials=num_trials, env_name="locomotion", robot_type="halfcheetah")
+    train_ecorobot(num_trials=num_trials, env_name="locomotion", robot_type="ant")
+    train_ecorobot(num_trials=num_trials, env_name="locomotion_with_obstacles", robot_type="halfcheetah")
+    train_ecorobot(num_trials=num_trials, env_name="deceptive_maze_easy", robot_type="ant")
+    train_ecorobot(num_trials=num_trials, env_name="deceptive_maze_easy", robot_type="discrete_fish")
+    train_ecorobot(num_trials=num_trials, env_name="maze_with_stepping_stones", robot_type="ant")
 
 
 
@@ -136,7 +135,5 @@ if __name__ == "__main__":
     parser.add_argument("--num_trials", type=int, help="Number of trials", default=10)
     args = parser.parse_args()
 
-    #train_stepping_gates_all(num_trials=args.num_trials)
-    train_brax_all(num_trials=args.num_trials)
-    #train_ecorobot_all(num_trials=args.num_trials)
-    
+    train_stepping_gates_all(num_trials=args.num_trials)
+    train_ecorobot_all(num_trials=args.num_trials)
