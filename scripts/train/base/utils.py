@@ -7,6 +7,7 @@ default_env_params = {"n_parity": {"n_input": 6},
                       "locomotion_with_obstacles": {},
                       "deceptive_maze_easy": {},
                       "maze_with_stepping_stones": {},
+                      "hunted": {},
                       }
 
 max_rewards = {"n_parity": 0,
@@ -18,6 +19,7 @@ max_rewards = {"n_parity": 0,
                "locomotion_with_obstacles": 4500,
                "deceptive_maze_easy": 4500,
                "maze_with_stepping_stones": 4500,
+               "hunted": 4500,
                }
 
 

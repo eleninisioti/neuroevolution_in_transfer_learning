@@ -19,6 +19,12 @@ from ecorobot import envs as ecorobot_envs
 from envs.stepping_gates.stepping_gates.envs.wrappers import wrap as dgates_wrap
 import wandb
 
+# Register the hunted environment manually since it was removed from brax registry
+import sys
+sys.path.insert(0, '/home/eleni/workspace/old/neuroevolution_in_transfer_learning/.venv/lib/python3.12/site-packages/brax/envs')
+from hunted import Hunted
+brax_envs.register_environment('hunted', Hunted)
+
 def _unpmap(v):
   return jax.tree_util.tree_map(lambda x: x[0], v)
 

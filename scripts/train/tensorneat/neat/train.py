@@ -78,7 +78,7 @@ def train_ecorobot(num_trials, env_name, robot_type):
                         "optimizer_type": "tensorneat",
                         "optimizer_params": {"generations": train_gens[env_name],
                                              "pop_size": 1024,
-                                             "num_species": 20}}
+                                             "num_species": 50}}
 
 
     exp = Experiment(env_config=env_config,

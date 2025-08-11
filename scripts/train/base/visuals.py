@@ -4,19 +4,12 @@ import matplotlib.pyplot as plt
 import seaborn
 import jax.numpy as jnp
 from sklearn.decomposition import PCA
-from bokeh.plotting import figure, output_file, save
 import pandas as pd
 import networkx as nx
 import numpy as onp
-from bokeh.plotting import figure
-from bokeh.palettes import Iridescent, Blues8
-from bokeh.plotting import from_networkx
-from bokeh.models import Arrow, VeeHead, NormalHead, MultiLine, Bezier
-from bokeh.models import Legend, Circle, ColumnDataSource, HoverTool, LabelSet
-from bokeh.transform import linear_cmap
+
 import copy
 from matplotlib.colors import LinearSegmentedColormap
-from bokeh.io import export_png
 
 
 

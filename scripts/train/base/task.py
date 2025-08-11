@@ -63,7 +63,10 @@ class Task:
             for eval_trial in range(self.num_eval_trials):
 
                 rng = jax.random.PRNGKey(seed=eval_trial)
-                state = jit_env_reset(rng, jax.numpy.array([task]))
+                if self.config["env_config"]["env_name"] != "hunted":
+                    state = jit_env_reset(rng, jax.numpy.array([task]))
+                else:
+                    state = jit_env_reset(rng)
                 cum_reward = 0
                 infos = []
                 actions = []

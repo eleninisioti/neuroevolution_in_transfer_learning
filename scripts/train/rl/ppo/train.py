@@ -113,7 +113,8 @@ def train_stepping_gates_all(num_trials):
     train_stepping_gates(num_trials=num_trials, env_name="simple_alu", curriculum=True)
 
 def train_brax_all(num_trials):
-    train_brax(num_trials=num_trials, env_name="ant")
+    #train_brax(num_trials=num_trials, env_name="ant")
+    train_brax(num_trials=num_trials, env_name="hunted")
 
     #train_brax(num_trials=num_trials, env_name="halfcheetah")
     
@@ -124,9 +125,9 @@ def train_ecorobot_all(num_trials):
     #train_ecorobot(num_trials=num_trials, env_name="locomotion", robot_type="ant")
     #train_ecorobot(num_trials=num_trials, env_name="locomotion_with_obstacles", robot_type="halfcheetah")
     #train_ecorobot(num_trials=num_trials, env_name="deceptive_maze_easy", robot_type="ant")
-    train_ecorobot(num_trials=num_trials, env_name="deceptive_maze_easy", robot_type="discrete_fish")
+    #train_ecorobot(num_trials=num_trials, env_name="deceptive_maze_easy", robot_type="discrete_fish")
 
-    #train_ecorobot(num_trials=num_trials, env_name="maze_with_stepping_stones", robot_type="discrete_fish")
+    train_ecorobot(num_trials=num_trials, env_name="maze_with_stepping_stones", robot_type="discrete_fish")
 
 
 
@@ -136,5 +137,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     #train_stepping_gates_all(num_trials=args.num_trials)
-    #train_brax_all(num_trials=args.num_trials)
-    train_ecorobot_all(num_trials=args.num_trials)
+    train_brax_all(num_trials=args.num_trials)
+    #train_ecorobot_all(num_trials=args.num_trials)
+    
