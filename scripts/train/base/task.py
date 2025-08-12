@@ -42,6 +42,7 @@ class Task:
         env = self.env
         jit_env_reset = jax.jit(env.reset)
         jit_env_step = jax.jit(env.step)
+        #jit_env_step = env.step
 
 
         for task in tasks:

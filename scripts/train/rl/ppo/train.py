@@ -113,7 +113,7 @@ def train_stepping_gates_all(num_trials):
     train_stepping_gates(num_trials=num_trials, env_name="simple_alu", curriculum=True)
 
 def train_brax_all(num_trials):
-    train_brax(num_trials=num_trials, env_name="ant")
+    train_brax(num_trials=num_trials, env_name="hunted")
 
     #train_brax(num_trials=num_trials, env_name="halfcheetah")
     
@@ -136,5 +136,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     #train_stepping_gates_all(num_trials=args.num_trials)
-    #train_brax_all(num_trials=args.num_trials)
-    train_ecorobot_all(num_trials=args.num_trials)
+    train_brax_all(num_trials=args.num_trials)
+    #train_ecorobot_all(num_trials=args.num_trials)
