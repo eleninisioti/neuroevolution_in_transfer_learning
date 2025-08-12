@@ -8,6 +8,7 @@ default_env_params = {"n_parity": {"n_input": 6},
                       "deceptive_maze_easy": {},
                       "maze_with_stepping_stones": {},
                       "hunted": {},
+                      "Acrobot-v1": {},
                       }
 
 max_rewards = {"n_parity": 0,
@@ -20,6 +21,7 @@ max_rewards = {"n_parity": 0,
                "deceptive_maze_easy": 4500,
                "maze_with_stepping_stones": 4500,
                "hunted": 4500,
+               "Acrobot-v1": 500,
                }
 
 

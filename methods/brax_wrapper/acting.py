@@ -36,11 +36,13 @@ def actor_step(
     env_state: State,
     policy: Policy,
     key: PRNGKey,
+        env_params: dict,
+
     extra_fields: Sequence[str] = ()
 ) -> Tuple[State, Transition]:
   """Collect data."""
   actions, policy_extras = policy(env_state.obs, key)
-  nstate = env.step(env_state, actions)
+  nstate = env.step(env_state, actions, env_params)
   state_extras = {x: nstate.info[x] for x in extra_fields}
   return nstate, Transition(  # pytype: disable=wrong-arg-types  # jax-ndarray
       observation=env_state.obs,
@@ -59,6 +61,7 @@ def generate_unroll(
     env_state: State,
     policy: Policy,
     key: PRNGKey,
+        env_params: dict,
     unroll_length: int,
     extra_fields: Sequence[str] = ()
 ) -> Tuple[State, Transition]:
@@ -69,7 +72,7 @@ def generate_unroll(
     state, current_key = carry
     current_key, next_key = jax.random.split(current_key)
     nstate, transition = actor_step(
-        env, state, policy, current_key, extra_fields=extra_fields)
+        env, state, policy, current_key, env_params=env_params, extra_fields=extra_fields)
     return (nstate, next_key), transition
 
   (final_state, _), data = jax.lax.scan(
@@ -102,7 +105,8 @@ class Evaluator:
 
     def generate_eval_unroll(policy_params: PolicyParams,
                              key: PRNGKey,
-                             env_params: dict) -> State:
+                               env_params: dict,
+) -> State:
       reset_keys = jax.random.split(key, num_eval_envs)
       eval_first_state = eval_env.reset(reset_keys, env_params)
       return generate_unroll(
@@ -110,6 +114,7 @@ class Evaluator:
           eval_first_state,
           eval_policy_fn(policy_params),
           key,
+          env_params=env_params,
           unroll_length=episode_length // action_repeat)[0]
 
     self._generate_eval_unroll = jax.jit(generate_eval_unroll)
@@ -118,7 +123,8 @@ class Evaluator:
   def run_evaluation(self,
                      policy_params: PolicyParams,
                      training_metrics: Metrics,
-                     env_params: dict,
+                    env_params: dict,
+
                      aggregate_episodes: bool = True) -> Metrics:
     """Run one epoch of evaluation."""
     self._key, unroll_key = jax.random.split(self._key)

@@ -105,7 +105,35 @@ def train_ecorobot(num_trials, env_name, robot_type):
                      exp_config=exp_config)
     exp.run()
 
+def train_gymnax(num_trials, env_name):
 
+    # configure experiment
+    exp_config = {"seed": 0,
+                  "num_trials": num_trials}
+    
+    # configure environment
+    env_params = default_env_params[env_name]
+    env_config = {"env_type": "gymnax",
+                  "env_name": env_name,
+                  "curriculum": False,
+                  "env_params": {}}
+    
+    
+    # configure method
+    num_timesteps = train_timesteps[env_name]
+    optimizer_config = {"optimizer_name": "ppo",
+                        "optimizer_type": "brax",
+                        "optimizer_params": {"num_timesteps": num_timesteps}}
+    
+    model_config = {"network_type": "MLP",
+                    "model_params": arch[(env_name)]}
+
+
+    exp = Experiment(env_config=env_config,
+                     optimizer_config=optimizer_config,
+                     model_config = model_config,
+                     exp_config=exp_config)
+    exp.run()
 
 def train_stepping_gates_all(num_trials):
     train_stepping_gates(num_trials=num_trials, env_name="n_parity", curriculum=False)
@@ -114,11 +142,13 @@ def train_stepping_gates_all(num_trials):
 
 def train_brax_all(num_trials):
     #train_brax(num_trials=num_trials, env_name="ant")
-    train_brax(num_trials=num_trials, env_name="halfcheetah")
-
     #train_brax(num_trials=num_trials, env_name="halfcheetah")
+
+    train_brax(num_trials=num_trials, env_name="halfcheetah")
     
     
+def train_gymnax_all(num_trials):
+    train_gymnax(num_trials=num_trials, env_name="Acrobot-v1")
     
 def train_ecorobot_all(num_trials):
     train_ecorobot(num_trials=num_trials, env_name="locomotion", robot_type="halfcheetah")
@@ -137,4 +167,5 @@ if __name__ == "__main__":
 
     #train_stepping_gates_all(num_trials=args.num_trials)
     #train_ecorobot_all(num_trials=args.num_trials)
-    train_brax_all(num_trials=args.num_trials)
+    #train_brax_all(num_trials=args.num_trials)
+    train_gymnax_all(num_trials=args.num_trials)

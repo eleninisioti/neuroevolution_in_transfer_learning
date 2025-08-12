@@ -166,14 +166,14 @@ class EvalWrapper(Wrapper):
     reset_state.info['eval_metrics'] = eval_metrics
     return reset_state
 
-  def step(self, state: State, action: jax.Array) -> State:
+  def step(self, state: State, action: jax.Array, env_params=None) -> State:
     state_metrics = state.info['eval_metrics']
     if not isinstance(state_metrics, EvalMetrics):
       raise ValueError(
           f'Incorrect type for state_metrics: {type(state_metrics)}'
       )
     del state.info['eval_metrics']
-    nstate = self.env.step(state, action)
+    nstate = self.env.step(state, action, env_params)
     nstate.metrics['reward'] = nstate.reward
     episode_steps = jp.where(
         state_metrics.active_episodes,

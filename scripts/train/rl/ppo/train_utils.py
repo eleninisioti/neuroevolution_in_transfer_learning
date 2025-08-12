@@ -18,6 +18,7 @@ from brax import envs as brax_envs
 from ecorobot import envs as ecorobot_envs
 from envs.stepping_gates.stepping_gates.envs.wrappers import wrap as dgates_wrap
 import wandb
+import gymnax
 
 # Register the hunted environment manually since it was removed from brax registry
 import sys
@@ -66,6 +67,17 @@ class PPOExperiment(Experiment):
         self.env.num_tasks = 1
         self.config["env_config"]["action_size"] = self.env.action_size
         self.config["env_config"]["observation_size"] = self.env.observation_size
+        self.config["env_config"]["episode_length"] = 1000
+        self.config["env_config"]["num_tasks"] = 1
+        
+    def setup_gymnax_env(self):
+        self.env, env_params = gymnax.make(env_id=self.config["env_config"]["env_name"])
+        self.config["env_config"]["env_params"] = env_params
+
+        self.env.reward_for_solved = max_rewards[self.config["env_config"]["env_name"]]
+        self.env.num_tasks = 1
+        self.config["env_config"]["action_size"] = self.env.num_actions
+        self.config["env_config"]["observation_size"] = self.env.obs_shape[0]
         self.config["env_config"]["episode_length"] = 1000
         self.config["env_config"]["num_tasks"] = 1
         
@@ -129,7 +141,8 @@ class PPOExperiment(Experiment):
 
         make_inference_fn, params, _, training_state = self.model(environment=self.env,
                                                                   progress_fn=self.progress,
-                                                                  save_params_fn=self.save_params)
+                                                                  save_params_fn=self.save_params,
+                                                                  gymnax_env_params=self.config["env_config"]["env_params"])
 
         self.final_state = {"inference_fn": make_inference_fn,
                             "params": params,

@@ -43,8 +43,9 @@ import numpy as np
 import optax
 from orbax import checkpoint as ocp
 from methods.brax_wrapper.wrappers.training import wrap as brax_wrap
+from methods.brax_wrapper.wrappers.training_gymnax import wrap as gymnax_wrap
 #from brax.envs.wrappers.training import wrap as brax_wrap
-
+import gymnax
 from envs.stepping_gates.stepping_gates.envs.wrappers import wrap as dgates_wrap
 import gymnasium
 import numpy as onp
@@ -82,6 +83,7 @@ def train(
     num_timesteps: int,
     episode_length: int,
     save_params_fn,
+    gymnax_env_params, # this is needed for gymnax
     skip_connections_prob: float=0.0,
     num_neurons: int=32, # number of neurons used in each layer of the policy network. value network will be this times 8
     num_layers: int=4, # number of layers used in policy network. value network will be this +1
@@ -220,6 +222,7 @@ def train(
   assert num_envs % device_count == 0
 
   env = environment
+  gymnax_env = True
   if wrap_env:
     v_randomization_fn = None
     if randomization_fn is not None:
@@ -236,8 +239,8 @@ def train(
           action_repeat=action_repeat,
           randomization_fn=v_randomization_fn,
       )
-    elif isinstance(environment, gymnasium.Env):
-        env = gym_wrap(
+    elif gymnax_env==True:
+        env = gymnax_wrap(
             environment,
             episode_length=episode_length,
             action_repeat=action_repeat,
@@ -337,10 +340,10 @@ def train(
       skip_connections_prob=skip_connections_prob)
   else:
 
-      if isinstance(environment, gymnasium.Env):
-          action_size = env.action_space.n
-      else:
+      if isinstance(environment, envs.Env):
           action_size = env.action_size
+      else:
+          action_size = env.num_actions
 
 
       ppo_network = network_factory(
@@ -416,8 +419,8 @@ def train(
           current_state,
           policy,
           current_key,
-          unroll_length,
-
+          unroll_length=unroll_length,
+          env_params=gymnax_env_params,
           extra_fields=('truncation',)) # this is used in brax
 
       return (next_state, next_key), data
@@ -539,21 +542,21 @@ def train(
             action_repeat=action_repeat,
             randomization_fn=v_randomization_fn,
         )
-    elif isinstance(environment, gymnasium.Env):
-        eval_env = gym_wrap(
+    elif gymnax_env==True:
+        eval_env = gymnax_wrap(
             environment,
             episode_length=episode_length,
             action_repeat=action_repeat,
             randomization_fn=v_randomization_fn,
         )
     else:
-        eval_env = dgates_wrap(
-            environment,
-            episode_length=episode_length,
-            action_repeat=action_repeat,
-            randomization_fn=v_randomization_fn,
-        )
 
+      eval_env = dgates_wrap(
+          environment,
+          episode_length=episode_length,
+          action_repeat=action_repeat,
+          randomization_fn=v_randomization_fn,
+      )
 
   evaluator = acting.Evaluator(
       eval_env,
@@ -570,7 +573,7 @@ def train(
         _unpmap(
             (training_state.normalizer_params, training_state.params.policy)),
         training_metrics={},
-    env_params=training_state.env_params)
+    env_params=gymnax_env_params)
     logging.info(metrics)
     progress_fn((0, training_state.env_params, metrics))
 
@@ -601,7 +604,7 @@ def train(
           _unpmap(
               (training_state.normalizer_params, training_state.params.policy)),
           training_metrics,
-      training_state.env_params)
+      gymnax_env_params)
 
 
       def change_task(env_params):

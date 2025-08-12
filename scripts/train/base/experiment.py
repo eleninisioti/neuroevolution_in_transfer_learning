@@ -80,6 +80,9 @@ class Experiment:
             
         elif self.config["env_config"]["env_type"] == "ecorobot":
             self.setup_ecorobot_env()
+            
+        elif self.config["env_config"]["env_type"] == "gymnax":
+            self.setup_gymnax_env()
 
         self.task = Task(self.env, self.config)
 
