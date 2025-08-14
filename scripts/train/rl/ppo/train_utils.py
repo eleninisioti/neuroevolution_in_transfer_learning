@@ -5,6 +5,7 @@ import envs
 import pickle
 from scripts.train.rl.ppo.hyperparams import hyperparams
 from methods.brax_wrapper.ppo import train as ppo
+from methods.brax_wrapper.ppo_vision import train as ppo_vision
 from scripts.train.base.experiment import Experiment
 from functools import partial
 import numpy as onp
@@ -37,13 +38,21 @@ class PPOExperiment(Experiment):
 
 
     def init_model(self):
+        if "MinAtar" in self.config["env_config"]["env_name"]:
+            train_fn = functools.partial(ppo_vision,
+                                         **self.config["model_config"]["model_params"],
+                                         **hyperparams[(self.config["env_config"]["env_name"])],
+                                         episode_length=self.config["env_config"]["episode_length"],
+                                         num_timesteps=self.config["optimizer_config"]["optimizer_params"]["num_timesteps"],
+                                         seed=self.config["exp_config"]["trial_seed"])  
+        else:
 
-        train_fn = functools.partial(ppo,
-                                     **self.config["model_config"]["model_params"],
-                                     **hyperparams[(self.config["env_config"]["env_name"])],
-                                     episode_length=self.config["env_config"]["episode_length"],
-                                     num_timesteps=self.config["optimizer_config"]["optimizer_params"]["num_timesteps"],
-                                     seed=self.config["exp_config"]["trial_seed"])
+            train_fn = functools.partial(ppo,
+                                        **self.config["model_config"]["model_params"],
+                                        **hyperparams[(self.config["env_config"]["env_name"])],
+                                        episode_length=self.config["env_config"]["episode_length"],
+                                            num_timesteps=self.config["optimizer_config"]["optimizer_params"]["num_timesteps"],
+                                        seed=self.config["exp_config"]["trial_seed"])
         self.model = functools.partial(train_fn.func, **train_fn.keywords)
 
     def cleanup(self):
@@ -83,6 +92,8 @@ class PPOExperiment(Experiment):
         
         if self.config["env_config"]["env_name"] == "MountainCar-v0":
             obs_size = 2
+        elif "MinAtar" in self.config["env_config"]["env_name"]:
+            obs_size = {"pixels/": self.env.obs_shape}
         else:
             obs_size = self.env.obs_shape[0]
         self.config["env_config"]["observation_size"] = obs_size

@@ -110,12 +110,22 @@ class GymnaxTaskWithPerturbation(eqx.Module):
 
 		policy_state, policy_states = policy.initialize(init_policy_key)
 		obs, gymnax_state = self.initialize(init_env_key)
+		#obs = obs.reshape(-1)  # Collapse to single dimension
+
 		env_state = GymnaxState(env_state=gymnax_state, obs=obs, reward=0.0, done=False)
 		init_state = State(env_state=env_state, policy_state=policy_state)
 
 		obs_size = self.obs_size
 		action_size = self.action_size
-		noise = jax.random.uniform(key, (obs_size,), minval=-self.noise_range, maxval=self.noise_range)
+		# Generate noise that matches the observation shape
+		# Get the actual observation shape from the environment
+		obs_shape = self.env.obs_shape
+		if len(obs_shape) == 3:
+			# For image observations (like MinAtar): generate noise in image format
+			noise = jax.random.uniform(key, obs_shape, minval=-self.noise_range, maxval=self.noise_range)
+		else:
+			# For flattened observations: generate noise in flattened format
+			noise = jax.random.uniform(key, (obs_size,), minval=-self.noise_range, maxval=self.noise_range)
 
 		def env_step(carry, x):
 			state, key = carry
@@ -125,6 +135,8 @@ class GymnaxTaskWithPerturbation(eqx.Module):
 
 			action = jnp.argmax(action)
 			obs, gymnax_state, reward, done, _ = self.env.step(key, state.env_state.env_state, action, self.gymnax_env_params)
+			#obs = obs.reshape(-1)  # Collapse to single dimension
+
 			obs = obs + noise
 
 			env_state = GymnaxState(env_state=gymnax_state, obs=obs, reward=reward, done=done)	

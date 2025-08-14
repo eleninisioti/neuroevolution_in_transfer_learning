@@ -12,6 +12,9 @@ default_env_params = {"n_parity": {"n_input": 6},
                       "MountainCar-v0": {"max_steps_in_episode": 200},
                       "MountainCarContinuous-v0": {"max_steps_in_episode": 200},
                       "CartPole-v1": {"max_steps_in_episode": 200},
+                      "Breakout-MinAtar": {"max_steps_in_episode": 1000},
+                      "Freeway-MinAtar": {"max_steps_in_episode": 2500},
+                      "SpaceInvaders-MinAtar": {"max_steps_in_episode": 1000},
                       }
 
 max_rewards = {"n_parity": 0,
@@ -28,6 +31,9 @@ max_rewards = {"n_parity": 0,
                "MountainCar-v0": -50, # sota is -110
                "MountainCarContinuous-v0": -50,
                "CartPole-v1": 500,
+               "Breakout-MinAtar": 500,
+               "Freeway-MinAtar": 33,
+               "SpaceInvaders-MinAtar": 689,
                }
 
 

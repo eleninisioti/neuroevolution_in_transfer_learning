@@ -78,6 +78,8 @@ class EvosaxExperiment(Experiment):
         self.config["env_config"]["action_size"] = self.env.num_actions
         if  "MountainCar" in self.config["env_config"]["env_name"]:
             obs_size = 2
+        elif "MinAtar" in self.config["env_config"]["env_name"]:
+            obs_size =  onp.prod(self.env.obs_shape)
         else:
             obs_size = self.env.obs_shape[0]
         self.config["env_config"]["observation_size"] = obs_size

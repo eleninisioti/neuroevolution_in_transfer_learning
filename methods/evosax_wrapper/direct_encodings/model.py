@@ -148,6 +148,80 @@ class RNN(eqx.Module):
         state = state._replace(rnn_state=h)
         return a, state
 
+
+class CNN(eqx.Module):
+    """CNN module with three heads for MinAtar games."""
+    
+    action_dims: int
+    obs_dims: int
+    max_nodes: int
+    conv: nn.Conv2d
+    fc_hidden: nn.Linear
+    output: nn.Linear
+    activation: callable
+
+    def __init__(self, action_dims, obs_dims, total_nodes, *, key: jax.Array):
+        self.action_dims = action_dims
+        self.obs_dims = obs_dims
+        self.max_nodes = total_nodes
+        
+        # Split key for different layers
+        key, conv_key, fc_key, out1_key, out2_key, out3_key = jr.split(key, 6)
+        
+        # Single conv layer: 7 input channels -> 32 output channels, 3x3 kernel, stride=1
+        self.conv = nn.Conv2d(7, 32, kernel_size=3, stride=1, key=conv_key)
+        
+        # Calculate linear units after conv layer
+        # For 10x10 input with 3x3 kernel and stride=1: (10-3)/1 + 1 = 8
+        # So 8x8x32 = 2048 features
+        num_linear_units = 8 * 8 * 32
+        
+        # Hidden fully connected layer
+        self.fc_hidden = nn.Linear(num_linear_units, 256, key=fc_key)
+        
+        # Single output head for action_dims actions
+        self.output = nn.Linear(256, action_dims, key=out1_key)
+        
+        self.activation = jnn.relu
+
+    def initialize(self, init_key):
+        # For CNN, we need to create a compatible policy state
+        # The actual CNN parameters are in the module itself
+        # Use a fixed size for the evolutionary framework compatibility
+        weights = jnp.zeros((100, 100))  # Fixed size for compatibility
+        adj = jnp.zeros((100, 100))
+        final_policy = PolicyState(weights=weights, adj=adj, rnn_state=jnp.zeros((100,)))
+        interm_policies = jax.tree_map(lambda x: x[None, :], final_policy)
+        return final_policy, interm_policies
+
+    def get_phenotype(self, weights):
+        # CNN has fixed architecture, so phenotype is the same
+        # Use a fixed size for the evolutionary framework compatibility
+        adj = jnp.zeros((100, 100))
+        final_policy = PolicyState(weights=weights, adj=adj, rnn_state=jnp.zeros((100,)))
+        interm_policies = jax.tree_map(lambda x: x[None, :], final_policy)
+        return final_policy, interm_policies
+
+    def __call__(self, obs: jax.Array, state: PolicyState, key: jax.Array, obs_size=None, action_size=None) -> Tuple[jax.Array, PolicyState]:
+        # Handle MinAtar observations: reshape from (10, 10, 7) to (7, 10, 10) for Conv2d
+        if obs.shape == (10, 10, 7):  # MinAtar format
+            x = jnp.transpose(obs, (2, 0, 1))  # Transpose to (7, 10, 10) for Conv2d
+        else:
+            x = obs
+        
+        # Apply conv layer
+        x = self.activation(self.conv(x))
+        
+        # Flatten and apply hidden FC layer
+        x = x.reshape(-1)  # Flatten to 1D
+        x = self.activation(self.fc_hidden(x))
+        
+        # Get single output
+        output = self.output(x)
+        
+        return output, state
+
+
 def make_model(config, key):
     """ Creates a direct encoding
     """
@@ -168,6 +242,13 @@ def make_model(config, key):
     elif config["model_config"]["network_type"] == "RNN":
 
         model = RNN(key=key_model,
+                    obs_dims=input_size,
+                    action_dims=action_size,
+                    total_nodes=max_nodes,
+                    )
+    elif config["model_config"]["network_type"] == "CNN":
+
+        model = CNN(key=key_model,
                     obs_dims=input_size,
                     action_dims=action_size,
                     total_nodes=max_nodes,

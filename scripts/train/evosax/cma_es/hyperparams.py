@@ -8,7 +8,11 @@ train_gens = {"n_parity": 5,
                    "Acrobot-v1": 1000,
                    "MountainCar-v0": 2000,
                    "MountainCarContinuous-v0": 2000,
-                   "CartPole-v1": 4000}
+                   "CartPole-v1": 4000,
+                   "Breakout-MinAtar": 5000,
+                   "Freeway-MinAtar": 5000,
+                   "SpaceInvaders-MinAtar": 5000,
+                   }
 
 
 
@@ -44,6 +48,15 @@ hyperparams = {
                     "discrete_weights": False,
                 },
     "CartPole-v1": { "max_hidden_neurons": 24,
+                    "discrete_weights": False,
+                },
+    "Breakout-MinAtar": { "max_hidden_neurons": 24,
+                    "discrete_weights": False,
+                },
+    "Freeway-MinAtar": { "max_hidden_neurons": 24,
+                    "discrete_weights": False,
+                },
+    "SpaceInvaders-MinAtar": { "max_hidden_neurons": 24,
                     "discrete_weights": False,
                 },
 }
