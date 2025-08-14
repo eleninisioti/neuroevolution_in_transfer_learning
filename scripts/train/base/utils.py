@@ -8,7 +8,10 @@ default_env_params = {"n_parity": {"n_input": 6},
                       "deceptive_maze_easy": {},
                       "maze_with_stepping_stones": {},
                       "hunted": {},
-                      "Acrobot-v1": {},
+                      "Acrobot-v1": {"max_steps_in_episode": 200},
+                      "MountainCar-v0": {"max_steps_in_episode": 200},
+                      "MountainCarContinuous-v0": {"max_steps_in_episode": 200},
+                      "CartPole-v1": {"max_steps_in_episode": 200},
                       }
 
 max_rewards = {"n_parity": 0,
@@ -22,6 +25,9 @@ max_rewards = {"n_parity": 0,
                "maze_with_stepping_stones": 4500,
                "hunted": 4500,
                "Acrobot-v1": 500,
+               "MountainCar-v0": -50, # sota is -110
+               "MountainCarContinuous-v0": -50,
+               "CartPole-v1": 500,
                }
 
 

@@ -4,7 +4,11 @@ train_gens = {"n_parity": 5,
                    "maze_with_stepping_stones": 4000,
                    "locomotion_with_obstacles": 1000,
                    "locomotion": 2000,
-                   "deceptive_maze_easy": 100}
+                   "deceptive_maze_easy": 100,
+                   "Acrobot-v1": 1000,
+                   "MountainCar-v0": 2000,
+                   "MountainCarContinuous-v0": 2000,
+                   "CartPole-v1": 4000}
 
 
 
@@ -24,9 +28,24 @@ hyperparams = {
     "locomotion_with_obstacles": { "max_hidden_neurons": 24,
                      "discrete_weights": False,
                  },
+    "locomotion": { "max_hidden_neurons": 24,
+                    "discrete_weights": False,
+                },
     "deceptive_maze_easy": { "max_hidden_neurons": 24,
                      "discrete_weights": False,
                  },
+    "Acrobot-v1": { "max_hidden_neurons": 24,
+                    "discrete_weights": False,
+                },
+    "MountainCar-v0": { "max_hidden_neurons": 24,
+                    "discrete_weights": False,
+                },
+    "MountainCarContinuous-v0": { "max_hidden_neurons": 24,
+                    "discrete_weights": False,
+                },
+    "CartPole-v1": { "max_hidden_neurons": 24,
+                    "discrete_weights": False,
+                },
 }
 
 

@@ -15,13 +15,15 @@ from stepping_gates import envs as stepping_gates_envs
 from ecorobot import envs as ecorobot_envs
 from methods.evosax_wrapper.base.tasks.rl import EcorobotTask
 from methods.evosax_wrapper.direct_encodings.model import make_model
-import methods.evosax_wrapper.evosax
 from methods.evosax_wrapper.base.training.evolution import EvosaxTrainer
 from methods.evosax_wrapper.base.training.logging  import Logger
 import equinox as eqx
 import evosax
 from methods.evosax_wrapper.base.tasks.rl import GatesTask
+from methods.evosax_wrapper.base.tasks.rl import GymnaxTask, GymnaxTaskWithPerturbation
+
 import wandb
+import gymnax
 
 
 def _unpmap(v):
@@ -64,7 +66,24 @@ class EvosaxExperiment(Experiment):
         self.config["env_config"]["observation_size"] = self.env.observation_size
         self.config["env_config"]["episode_length"] = self.env.episode_length
         self.config["env_config"]["num_tasks"] = self.env.num_tasks
+        
+        
+        
+    def setup_gymnax_env(self):
+        self.env, env_params = gymnax.make(env_id=self.config["env_config"]["env_name"])
+        #if self.config["env_config"]["env_params"]:
+        #    env_params = env_params.replace(**self.config["env_config"]["env_params"])
+        self.config["env_config"]["gymnax_env_params"] = env_params
 
+        self.config["env_config"]["action_size"] = self.env.num_actions
+        if  "MountainCar" in self.config["env_config"]["env_name"]:
+            obs_size = 2
+        else:
+            obs_size = self.env.obs_shape[0]
+        self.config["env_config"]["observation_size"] = obs_size
+
+        self.config["env_config"]["num_tasks"] = 1
+        self.config["env_config"]["episode_length"] = self.config["env_config"]["env_params"]["max_steps_in_episode"]
     
 
 
@@ -151,7 +170,23 @@ class EvosaxExperiment(Experiment):
                         data_fn=data_fn, env_kwargs={**self.config["env_config"]["env_params"]})
         """
         
-        self.env = EcorobotTask(statics=self.statics,
+        if self.config["env_config"]["env_type"] == "ecorobot":
+        
+            self.env = EcorobotTask(statics=self.statics,
+                                env=self.config["env_config"]["env_name"],
+                                max_steps=1000,
+                                data_fn=data_fn,
+                                env_kwargs={**self.config["env_config"]["env_params"]})
+        elif self.config["env_config"]["env_type"] == "gymnax":
+            self.env = GymnaxTaskWithPerturbation(statics=self.statics,
+                                env=self.config["env_config"]["env_name"],
+                                max_steps=1000,
+                                obs_size=self.config["env_config"]["observation_size"],
+                                action_size=self.config["env_config"]["action_size"],
+                                data_fn=data_fn,
+                                env_kwargs={**self.config["env_config"]["env_params"]})
+        else:
+            self.env = GatesTask(statics=self.statics,
                                 env=self.config["env_config"]["env_name"],
                                 max_steps=1000,
                                 data_fn=data_fn,

@@ -11,6 +11,7 @@ from ecorobot import envs as ecorobot_envs
 from brax.envs import Env
 #from brax import envs as brax_envs
 from jaxtyping import Float, PyTree
+import gymnax
 
 Params: TypeAlias = PyTree
 TaskParams: TypeAlias = PyTree
@@ -24,6 +25,221 @@ class State(NamedTuple):
 	policy_state: PolicyState
 	#action: jnp.array
 
+
+class GymnaxState(NamedTuple):
+    env_state: EnvState
+    obs: jnp.ndarray
+    reward: float
+    done: bool
+#=======================================================================
+
+class GymnaxTaskWithPerturbation(eqx.Module):
+	"""
+	"""
+	#-------------------------------------------------------------------
+	env: BraxEnv
+	statics: PyTree[...]
+	max_steps: int	
+	num_tasks: int
+	current_task: int
+	reward_for_solved: float
+	data_fn: Callable[[PyTree], dict]
+	gymnax_env_params: PyTree
+	perturbe_every_n_gens: int
+	noise_range: float
+	obs_size: int
+	action_size: int
+ 
+	#-------------------------------------------------------------------
+	def __init__(
+		self, 
+		statics: PyTree[...],
+		env: Union[str, BraxEnv],
+		max_steps: int,
+		obs_size: int,
+		action_size: int,
+		backend: str="mjx",
+		data_fn: Callable=lambda x: x, 
+		env_kwargs: dict={}):
+
+		self.env, params = gymnax.make(env_id=env)
+		# Extract environment-specific parameters (excluding custom task parameters)
+		env_params = {k: v for k, v in env_kwargs.items() if hasattr(params, k)}
+		if env_params:
+			params = params.replace(**env_params)
+		self.gymnax_env_params = params
+
+		self.obs_size = obs_size
+		self.action_size = action_size
+
+		self.statics = statics
+		self.max_steps = 300
+		self.data_fn = data_fn
+		self.num_tasks = 1
+		self.reward_for_solved = 5000
+		self.current_task = 0
+		self.perturbe_every_n_gens = 1
+		#self.noise_range = env_kwargs.get("noise_range", 2.0)  # Default to 2.0 if not specified
+		self.noise_range =  env_kwargs["noise_range"]
+		#self.noise_range = 0.0
+
+	def __call__(
+		self, 
+		params: Params, 
+		key: jax.Array, 
+		task_params: Optional[TaskParams]=None,
+			current_gen: int=0)->Tuple[Float, PyTree]:
+
+		_, _, data, policy_states= self.rollout(params, key)
+		return jnp.sum(data["reward"]), data, policy_states, 0.0
+
+ 
+	def initialize(self, key: jax.Array, target_function=None) -> EnvState:
+
+		return self.env.reset(key, params=self.gymnax_env_params)
+
+	def rollout(
+		self, 
+		params: Params, 
+		key: jax.Array, 
+		task_params: Optional[TaskParams]=None)->Tuple[State, State, dict]:
+		#jax.debug.print("max steps: {}", self.gymnax_env_params.max_steps_in_episode)
+
+		init_env_key, init_policy_key, rollout_key = jr.split(key, 3)
+		policy = eqx.combine(params, self.statics)
+
+		policy_state, policy_states = policy.initialize(init_policy_key)
+		obs, gymnax_state = self.initialize(init_env_key)
+		env_state = GymnaxState(env_state=gymnax_state, obs=obs, reward=0.0, done=False)
+		init_state = State(env_state=env_state, policy_state=policy_state)
+
+		obs_size = self.obs_size
+		action_size = self.action_size
+		noise = jax.random.uniform(key, (obs_size,), minval=-self.noise_range, maxval=self.noise_range)
+
+		def env_step(carry, x):
+			state, key = carry
+			key, _key = jr.split(key)
+			action, policy_state = policy(state.env_state.obs, state.policy_state, _key,obs_size=obs_size,action_size=action_size)
+			#jax.debug.print("action: {}", action)
+
+			action = jnp.argmax(action)
+			obs, gymnax_state, reward, done, _ = self.env.step(key, state.env_state.env_state, action, self.gymnax_env_params)
+			obs = obs + noise
+
+			env_state = GymnaxState(env_state=gymnax_state, obs=obs, reward=reward, done=done)	
+			new_state = State(env_state=env_state, policy_state=policy_state)
+			return [new_state, key], (state, action)
+
+		[state, _], (states, actions) = jax.lax.scan(env_step, [init_state, rollout_key], None, self.max_steps)	
+		data = {"policy_states": states.policy_state, "obs": states.env_state.obs}
+		data = self.data_fn(data)
+		data["reward"] = states.env_state.reward
+		# Find first occurrence of done == True, with fallback
+		first_done = jnp.argmax(states.env_state.done)
+		# If no episode is done, first_done will be 0, but we want to check if any are actually done
+		any_done = jnp.any(states.env_state.done)
+		first_done = jnp.where(any_done, first_done, states.env_state.done.shape[0])
+		indexes = jnp.arange(states.env_state.reward.shape[0])
+		data["reward"] = jnp.where(indexes > first_done, 0, states.env_state.reward)
+
+		data["actions"]  = actions
+		return state, states, data, policy_states
+
+
+
+class GymnaxTask(eqx.Module):
+	"""
+	"""
+	#-------------------------------------------------------------------
+	env: BraxEnv
+	statics: PyTree[...]
+	max_steps: int	
+	num_tasks: int
+	current_task: int
+	reward_for_solved: float
+	data_fn: Callable[[PyTree], dict]
+	gymnax_env_params: PyTree
+ 
+	#-------------------------------------------------------------------
+	def __init__(
+		self, 
+		statics: PyTree[...],
+		env: Union[str, BraxEnv],
+		max_steps: int,
+		backend: str="mjx",
+		data_fn: Callable=lambda x: x, 
+		env_kwargs: dict={}):
+
+		self.env, self.gymnax_env_params = gymnax.make(env_id=env)
+
+		self.statics = statics
+		self.max_steps = 300
+		self.data_fn = data_fn
+		self.num_tasks = 1
+		self.reward_for_solved = 5000
+		self.current_task = 0
+
+
+	def __call__(
+		self, 
+		params: Params, 
+		key: jax.Array, 
+		task_params: Optional[TaskParams]=None,
+			current_gen: int=0)->Tuple[Float, PyTree]:
+
+		_, _, data, policy_states= self.rollout(params, key)
+		return jnp.sum(data["reward"]), data, policy_states, 0.0
+
+ 
+	def initialize(self, key: jax.Array, target_function=None) -> EnvState:
+
+		return self.env.reset(key, params=self.gymnax_env_params)
+
+	def rollout(
+		self, 
+		params: Params, 
+		key: jax.Array, 
+		task_params: Optional[TaskParams]=None)->Tuple[State, State, dict]:
+
+		init_env_key, init_policy_key, rollout_key = jr.split(key, 3)
+		policy = eqx.combine(params, self.statics)
+
+		policy_state, policy_states = policy.initialize(init_policy_key)
+		obs, gymnax_state = self.initialize(init_env_key)
+		env_state = GymnaxState(env_state=gymnax_state, obs=obs, reward=0.0, done=False)
+		init_state = State(env_state=env_state, policy_state=policy_state)
+
+		obs_size = self.env.obs_shape[0]
+		action_size = self.env.num_actions
+
+		def env_step(carry, x):
+			state, key = carry
+			key, _key = jr.split(key)
+			action, policy_state = policy(state.env_state.obs, state.policy_state, _key,obs_size=obs_size,action_size=action_size)
+			#jax.debug.print("Action changed to: {}", action)
+   
+			action = jnp.argmax(action)
+			obs, gymnax_state, reward, done, _ = self.env.step(key, state.env_state.env_state, action, self.gymnax_env_params)
+			env_state = GymnaxState(env_state=gymnax_state, obs=obs, reward=reward, done=done)	
+			new_state = State(env_state=env_state, policy_state=policy_state)
+			
+			return [new_state, key], (state, action)
+
+		[state, _], (states, actions) = jax.lax.scan(env_step, [init_state, rollout_key], None, self.max_steps)	
+		data = {"policy_states": states.policy_state, "obs": states.env_state.obs}
+		data = self.data_fn(data)
+		data["reward"] = states.env_state.reward
+		# Find first occurrence of done == True, with fallback
+		first_done = jnp.argmax(states.env_state.done)
+		# If no episode is done, first_done will be 0, but we want to check if any are actually done
+		any_done = jnp.any(states.env_state.done)
+		first_done = jnp.where(any_done, first_done, states.env_state.done.shape[0])
+		indexes = jnp.arange(states.env_state.reward.shape[0])
+		data["reward"] = jnp.where(indexes > first_done, 0, states.env_state.reward)
+
+		data["actions"]  = actions
+		return state, states, data, policy_states
 
 #=======================================================================
 #=======================================================================

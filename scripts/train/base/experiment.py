@@ -100,7 +100,7 @@ class Experiment:
 
         # start logging
         wandb.init(
-            project=self.env_alias,
+            project=self.env_alias + "_noise2",
             name=self.opt_alias,
             tags =  "/trial_" + str(trial),
             config=self.config,

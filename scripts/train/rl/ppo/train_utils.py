@@ -72,12 +72,20 @@ class PPOExperiment(Experiment):
         
     def setup_gymnax_env(self):
         self.env, env_params = gymnax.make(env_id=self.config["env_config"]["env_name"])
+        env_params = env_params.replace(max_steps_in_episode=200)
         self.config["env_config"]["env_params"] = env_params
+        self.config["env_config"]["gymnax_env_params"] = env_params
+
 
         self.env.reward_for_solved = max_rewards[self.config["env_config"]["env_name"]]
         self.env.num_tasks = 1
         self.config["env_config"]["action_size"] = self.env.num_actions
-        self.config["env_config"]["observation_size"] = self.env.obs_shape[0]
+        
+        if self.config["env_config"]["env_name"] == "MountainCar-v0":
+            obs_size = 2
+        else:
+            obs_size = self.env.obs_shape[0]
+        self.config["env_config"]["observation_size"] = obs_size
         self.config["env_config"]["episode_length"] = 1000
         self.config["env_config"]["num_tasks"] = 1
         
@@ -161,7 +169,7 @@ class PPOExperiment(Experiment):
             height += kernel.shape[1]
             width += kernel.shape[0]
             kernels.append(kernel)
-        num_neurons = width + self.env.action_size * 2  # because ppo outputs mean and sigma
+        num_neurons = width + self.config["env_config"]["action_size"] * 2  # because ppo outputs mean and sigma
         weights = jnp.zeros((num_neurons, num_neurons))
         start_x = 0
         start_y = self.config["env_config"]["observation_size"]
@@ -177,7 +185,7 @@ class PPOExperiment(Experiment):
         for el in params["params"].values():
             kernel = el["bias"]
             width += kernel.shape[0]
-        width = width + self.env.observation_size
+        width = width + self.config["env_config"]["observation_size"]
         bias = jnp.zeros((width,))
         start_x = 0
         for el in params["params"].values():

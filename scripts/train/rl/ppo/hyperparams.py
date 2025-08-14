@@ -11,6 +11,8 @@ train_timesteps = {"n_parity": 150_000_000,
                    "maze_with_stepping_stones": 150_000_000,
                    "hunted": 150_000_000,
                    "Acrobot-v1": 50_000_000,
+                   "MountainCar-v0": 50_000_000,
+                   "CartPole-v1": 50_000_000,
                    }
 
 # ------ PPO hyperparams for brax implementation -------
@@ -161,6 +163,32 @@ hyperparams = {
                   "entropy_cost": 1e-2,
                   "action_repeat": 1,
                   },
+        "MountainCar-v0": {"reward_scaling": 1,
+                  "unroll_length": 20,
+                  "num_updates_per_batch": 8,
+                  "discounting": 0.95,
+                  "learning_rate": 3e-4,
+                  "num_minibatches": 32,
+                  "normalize_observations": True,
+                  "num_envs": 2048,
+                  "num_evals": 20,
+                  "batch_size": 512,
+                  "entropy_cost": 1e-2,
+                  "action_repeat": 1,
+                  },
+        "CartPole-v1": {"reward_scaling": 1,
+                  "unroll_length": 20,
+                  "num_updates_per_batch": 8,
+                  "discounting": 0.95,
+                  "learning_rate": 3e-4,
+                  "num_minibatches": 32,
+                  "normalize_observations": True,
+                  "num_envs": 2048,
+                  "num_evals": 20,
+                  "batch_size": 512,
+                  "entropy_cost": 1e-2,
+                  "action_repeat": 1,
+                  },
 }
 
 # ------ neural network architecture for policy network. just MLPs ------
@@ -174,8 +202,10 @@ arch = {"n_parity": {"num_layers": 6,
                       "num_neurons": 32},
                     "Acrobot-v1": {"num_layers": 2,
                       "num_neurons": 16},
-                    "Cartpole-v1": {"num_layers": 4,
+                    "CartPole-v1": {"num_layers": 4,
                       "num_neurons": 32},
+                    "MountainCar-v0": {"num_layers": 2,
+                      "num_neurons": 16}, 
                     
                     
 

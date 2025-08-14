@@ -35,8 +35,8 @@ class MLP(eqx.Module):
         self.max_nodes = max_nodes
         self.mlp = nn.MLP(obs_dims,
                           action_dims,
-                        32, 4,
-                          activation=linen.tanh, final_activation=linen.tanh,
+                        16, 2,
+                          activation=linen.relu, final_activation=lambda x: x,
                       key=key, use_bias=True, use_final_bias=True)
 
 
@@ -87,8 +87,9 @@ class MLP(eqx.Module):
         return final_policy, interm_policies
 
     def __call__(self, obs: jax.Array, state: PolicyState, key: jax.Array, obs_size=None, action_size=None) -> Tuple[jax.Array, PolicyState]:
-
+        #jax.debug.print("obs: {}",obs)
         a = self.mlp(obs)
+        #jax.debug.print("inside model: {}", a)
 
         return a, state
 

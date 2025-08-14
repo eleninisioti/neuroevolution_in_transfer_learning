@@ -24,8 +24,8 @@ class EvoParams:
     sigma_init: float = 0.07
     sigma_decay: float = 1.0
     sigma_limit: float = 0.01
-    init_min: float = 0.0
-    init_max: float = 0.0
+    init_min: float = -1.0
+    init_max: float = 1.0
     clip_min: float = -jnp.finfo(jnp.float32).max
     clip_max: float = jnp.finfo(jnp.float32).max
 
@@ -73,7 +73,7 @@ class SimpleGA(Strategy):
         )
 
     def initialize_strategy(
-        self, rng: chex.PRNGKey, params: EvoParams, pretrained_evosax_state:None,
+        self, rng: chex.PRNGKey, params: EvoParams, pretrained_evosax_state= None,
     ) -> EvoState:
         """`initialize` the differential evolution strategy."""
         if pretrained_evosax_state is None:
@@ -119,7 +119,7 @@ class SimpleGA(Strategy):
         x = jax.vmap(single_mate, in_axes=(0, 0, 0, None))(
             rng_mate, members_a, members_b, params.cross_over_rate
         )
-        epsilon = jnp.zeros_like(epsilon)
+        #epsilon = jnp.zeros_like(epsilon)
         x += epsilon
         return x, state
 

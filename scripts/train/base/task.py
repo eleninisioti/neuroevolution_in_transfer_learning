@@ -2,6 +2,7 @@ import jax
 import os
 from scripts.train.base.utils import max_rewards
 import numpy as onp
+import jax.numpy as jnp
 
 class Task:
 
@@ -35,85 +36,103 @@ class Task:
 
         elif config["env_config"]["env_type"] == "pattern_match":
             self.num_eval_trials = 1
+            
+        self.env_type = config["env_config"]["env_type"]
 
         self.eval_info = {}
+        
+        
+    def get_input_ouput(self, task):
+        obs_size = self.config["env_config"]["observation_size"]
+        action_size = self.config["env_config"]["action_size"]
+
+            
+        return obs_size, action_size
+    
+    def run_eval_trial_gymnax(self, env, task, eval_trial, act_fn, obs_size, action_size):
+        trial_rewards = []
+        trial_success = []
+        jit_env_reset = jax.jit(env.reset)
+        jit_env_step = jax.jit(env.step)
+        
+        rng = jax.random.PRNGKey(seed=eval_trial)
+        obs, state = jit_env_reset(rng, jax.numpy.array([task]))
+        cum_reward = 0
+        infos = []
+        actions = []
+        states = []
+        success = 0
+        episode_length = 0
+
+        for step in range(self.config["env_config"]["episode_length"]):
+
+            prev_obs = obs
+
+            act_rng, rng = jax.random.split(rng)
+            
+            
+            if self.config["optimizer_config"]["optimizer_name"] == "ppo":
+                act = act_fn(prev_obs)
+            else:
+                act = act_fn(prev_obs, action_size=action_size, obs_size=obs_size)
+
+
+            #act = act_fn(prev_obs, action_size=action_size, obs_size=obs_size)
+            if isinstance(act, tuple):
+                act, info = act
+                infos.append(info)
+            act = jnp.argmax(act)
+
+            obs, state, reward, done, _ = jit_env_step(act_rng, state, act, self.config["env_config"]["gymnax_env_params"])
+
+            cum_reward += float(reward)
+            actions.append(act)
+            if reward == max_rewards[self.config["env_config"]["env_name"]]:
+                success += 1
+            episode_length += 1
+
+            if done:
+                break
+        trial_success.append(float(success / episode_length))
+        trial_rewards.append(float(cum_reward))
+        
+        return trial_rewards, trial_success    
+    
+    def run_eval_trial(self, env, task, eval_trial, act_fn, obs_size, action_size):
+        if self.env_type == "gymnax":
+            return self.run_eval_trial_gymnax(env, task, eval_trial, act_fn, obs_size, action_size)
+        else:
+            return self.run_eval_trial_brax(task, env, eval_trial, act_fn, obs_size, action_size)
+        
+        
+        
+        
+        
+        
 
     def run_eval(self, act_fn, saving_dir, tasks, gens=None, final_policy=False):
         env = self.env
-        jit_env_reset = jax.jit(env.reset)
-        jit_env_step = jax.jit(env.step)
-
 
         for task in tasks:
             
-            trial_rewards = []
-            trial_success = []
+
 
             if not os.path.exists(saving_dir + "/task_" + str(task)):
                 os.makedirs(saving_dir + "/task_" + str(task))
 
             if final_policy:
-                obs_size = self.env.get_obs_size(self.num_tasks)
-                action_size = self.env.get_action_size(self.num_tasks)
+                obs_size, action_size = self.get_input_ouput(self.num_tasks)
+
 
             else:
-                obs_size = self.env.get_obs_size(task)
-                action_size = self.env.get_action_size(task)
+                obs_size, action_size = self.get_input_ouput(task)
+                
+            
 
             for eval_trial in range(self.num_eval_trials):
+                
+                trial_rewards, trial_success= self.run_eval_trial(env, task, eval_trial, act_fn, obs_size, action_size)
 
-                rng = jax.random.PRNGKey(seed=eval_trial)
-                if self.config["env_config"]["env_name"] != "hunted":
-                    state = jit_env_reset(rng, jax.numpy.array([task]))
-                else:
-                    state = jit_env_reset(rng)
-                cum_reward = 0
-                infos = []
-                actions = []
-                states = []
-                success = 0
-                episode_length = 0
-
-                for step in range(self.config["env_config"]["episode_length"]):
-
-                    prev_obs = state.obs
-
-                    act_rng, rng = jax.random.split(rng)
-
-
-                    if self.config["optimizer_config"]["optimizer_name"] == "ppo":
-                        act = act_fn(prev_obs)
-
-                    else:
-                        act = act_fn(prev_obs, action_size=action_size, obs_size=obs_size)
-
-                    if isinstance(act, tuple):
-                        act, info = act
-                        infos.append(info)
-
-                    
-                    state = jit_env_step(state, act)
-                    reward = state.reward
-                    done = state.done
-
-                    cum_reward += float(reward)
-                    actions.append(act)
-                    if reward == max_rewards[self.config["env_config"]["env_name"]]:
-                        success += 1
-                    episode_length += 1
-
-                    if self.config["env_config"]["env_type"] == "stepping_gates":
-                        states.append(onp.array([["Timestep", "Observation", "Action", "Label"],
-                                                 [str(step), str(prev_obs), str(act), str(state.info["label"])]]))
-                    else:
-                        states.append(state.pipeline_state)
-                    if done:
-                        break
-                trial_success.append(float(success / episode_length))
-                trial_rewards.append(float(cum_reward))
-
-                gif_path = self.env.show_rollout(states, save_dir=saving_dir + "/task_" + str(task),
-                                                     filename="eval_trial_" + str(eval_trial) + "_final_" + str(final_policy) + "_rew_" + str(cum_reward))
 
             task_alias = "task_" + str(task)
             if final_policy:
