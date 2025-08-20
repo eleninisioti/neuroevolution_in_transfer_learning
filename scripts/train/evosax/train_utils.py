@@ -207,7 +207,7 @@ class EvosaxExperiment(Experiment):
                                 num_tasks = self.env.num_tasks,
                                 reward_for_solved=self.env.reward_for_solved,
                                 # sigma_init = 0.01,
-                                es_kws={
+                                es_kws={**self.config["optimizer_config"]["optimizer_params"]["es_kws"]
                                         },
                                 logger=logger,
                                 progress_bar=False,

@@ -97,6 +97,8 @@ class CMA_ES(Strategy):
         """CMA-ES (e.g. Hansen, 2016)
         Reference: https://arxiv.org/abs/1604.00772
         Inspired by: https://github.com/CyberAgentAILab/cmaes"""
+        #elite_ratio= 0.5
+        #sigma_init= 1.0
         super().__init__(
             popsize,
             num_dims,

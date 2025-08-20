@@ -137,7 +137,9 @@ class GymnaxTaskWithPerturbation(eqx.Module):
 			obs, gymnax_state, reward, done, _ = self.env.step(key, state.env_state.env_state, action, self.gymnax_env_params)
 			#obs = obs.reshape(-1)  # Collapse to single dimension
 
-			obs = obs + noise
+			#obs = obs + noise
+   
+			#obs = obs.reshape(obs_shape)
 
 			env_state = GymnaxState(env_state=gymnax_state, obs=obs, reward=reward, done=done)	
 			new_state = State(env_state=env_state, policy_state=policy_state)
@@ -229,7 +231,7 @@ class GymnaxTask(eqx.Module):
 			state, key = carry
 			key, _key = jr.split(key)
 			action, policy_state = policy(state.env_state.obs, state.policy_state, _key,obs_size=obs_size,action_size=action_size)
-			#jax.debug.print("Action changed to: {}", action)
+			jax.debug.print("Action changed to: {}", action)
    
 			action = jnp.argmax(action)
 			obs, gymnax_state, reward, done, _ = self.env.step(key, state.env_state.env_state, action, self.gymnax_env_params)

@@ -100,14 +100,15 @@ def train_gymnax(num_trials, env_name):
     
     # configure method
     num_timesteps = train_gens[env_name]
-    optimizer_name = "OpenES"
+    optimizer_name = "SNES"
     optimizer_config = {"optimizer_name": optimizer_name,
                         "optimizer_type": "evosax",
                         "optimizer_params": {"generations": num_timesteps,
                                              "strategy": optimizer_name,
-                                             "popsize": 512}}
+                                             "popsize": 256,
+                                             "es_kws": {}}}
     
-    model_config = {"network_type": "CNN",
+    model_config = {"network_type": "MLP",
                     "model_params": hyperparams[env_name]}
 
 
@@ -138,10 +139,11 @@ def train_gymnax_all(num_trials):
     #train_gymnax(num_trials=num_trials, env_name="MountainCar-v0")
     #train_gymnax(num_trials=num_trials, env_name="CartPole-v1")
     #train_gymnax(num_trials=num_trials, env_name="MountainCarContinuous-v0")
-    #train_gymnax(num_trials=num_trials, env_name="Breakout-MinAtar")
+    train_gymnax(num_trials=num_trials, env_name="Breakout-MinAtar")
 
-    train_gymnax(num_trials=num_trials, env_name="Freeway-MinAtar")
+    #train_gymnax(num_trials=num_trials, env_name="Freeway-MinAtar")
     #train_gymnax(num_trials=num_trials, env_name="SpaceInvaders-MinAtar")
+    #train_gymnax(num_trials=num_trials, env_name="Pong-MinAtar")
 
 
 

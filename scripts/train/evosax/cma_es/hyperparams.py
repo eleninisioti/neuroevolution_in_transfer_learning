@@ -10,8 +10,9 @@ train_gens = {"n_parity": 5,
                    "MountainCarContinuous-v0": 2000,
                    "CartPole-v1": 4000,
                    "Breakout-MinAtar": 5000,
-                   "Freeway-MinAtar": 5000,
+                   "Freeway-MinAtar": 3000,
                    "SpaceInvaders-MinAtar": 5000,
+                   "Asterix-MinAtar": 5000,
                    }
 
 
@@ -57,6 +58,9 @@ hyperparams = {
                     "discrete_weights": False,
                 },
     "SpaceInvaders-MinAtar": { "max_hidden_neurons": 24,
+                    "discrete_weights": False,
+                },
+    "Asterix-MinAtar": { "max_hidden_neurons": 24,
                     "discrete_weights": False,
                 },
 }

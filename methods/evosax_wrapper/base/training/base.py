@@ -83,18 +83,49 @@ class BaseTrainer(eqx.Module):
 			jax.lax.cond(state.best_fitness >= self.reward_for_solved,
 											   lambda x: save_params(x), lambda x: None, data)
 
+			# Check early termination condition
+			#should_stop = (i >= 1000) & (s.best_fitness < 6.0)
+			should_stop = False
 
 
+   
+			
+			# Print message when condition is met
+			
 			self.logger.log(s, data, task_params)
 
-			return [s, k, task_params]
+			return [s, k, task_params, should_stop]
 
 		if self.progress_bar:
 			_step = progress_bar_fori(self.train_steps)(_step) #type: ignore
 
 		task_params_init = 0
 
-		[state, key, task_params] = jax.lax.fori_loop(0, self.train_steps, _step, [state, key, task_params_init])
+		# Use scan with early termination support
+		def _step_with_early_stop(carry, x):
+			state, key, task_params, should_stop = carry
+			generation = x
+			
+
+			# If we should stop, return current state without training
+			new_carry = jax.lax.cond(
+				should_stop,
+				lambda: [state, key, task_params, should_stop],  # Keep stopped state
+				lambda: _step(generation, (state, key, task_params))  # Continue training
+			)
+			
+			# Extract the should_stop flag from the training step result
+			_, _, _, new_should_stop = new_carry
+			
+			# Return (carry, output) pair as required by scan
+			return new_carry, None
+		
+		# Run scan with early termination
+		(state, key, task_params, _), _ = jax.lax.scan(
+			_step_with_early_stop, 
+			[state, key, task_params_init, False],  # Use list to match return type
+			jnp.arange(self.train_steps)
+		)
 		return state
 
 	#-------------------------------------------------------------------

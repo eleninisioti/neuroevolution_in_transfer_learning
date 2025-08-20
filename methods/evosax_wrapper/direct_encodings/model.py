@@ -149,16 +149,17 @@ class RNN(eqx.Module):
         return a, state
 
 
-class CNN(eqx.Module):
+class AtariCNN(eqx.Module):
     """CNN module with three heads for MinAtar games."""
     
     action_dims: int
     obs_dims: int
     max_nodes: int
-    conv: nn.Conv2d
+    conv1: nn.Conv2d
+   #conv3: nn.Conv2d
     fc_hidden: nn.Linear
-    output: nn.Linear
     activation: callable
+    #output: nn.Linear
 
     def __init__(self, action_dims, obs_dims, total_nodes, *, key: jax.Array):
         self.action_dims = action_dims
@@ -166,21 +167,16 @@ class CNN(eqx.Module):
         self.max_nodes = total_nodes
         
         # Split key for different layers
-        key, conv_key, fc_key, out1_key, out2_key, out3_key = jr.split(key, 6)
+        key, conv1_key, conv2_key, conv3_key, fc_key, out_key = jr.split(key, 6)
         
-        # Single conv layer: 7 input channels -> 32 output channels, 3x3 kernel, stride=1
-        self.conv = nn.Conv2d(7, 32, kernel_size=3, stride=1, key=conv_key)
+        # Define the layers properly using Equinox
+        self.conv1 = nn.Conv2d(4, 16, kernel_size=3, stride=1, key=conv1_key)
+        #self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1, key=conv3_key)
         
-        # Calculate linear units after conv layer
-        # For 10x10 input with 3x3 kernel and stride=1: (10-3)/1 + 1 = 8
-        # So 8x8x32 = 2048 features
-        num_linear_units = 8 * 8 * 32
-        
-        # Hidden fully connected layer
-        self.fc_hidden = nn.Linear(num_linear_units, 256, key=fc_key)
-        
-        # Single output head for action_dims actions
-        self.output = nn.Linear(256, action_dims, key=out1_key)
+        # Calculate feature size after conv layers
+        # For 10x10 input: 10x10 -> 1x1 -> 1x1 -> 1x1 = 1x1x64 = 64 features
+        self.fc_hidden = nn.Linear(1024, action_dims, key=fc_key)
+        #self.output = nn.Linear(256, action_dims, key=out_key)
         
         self.activation = jnn.relu
 
@@ -204,20 +200,18 @@ class CNN(eqx.Module):
 
     def __call__(self, obs: jax.Array, state: PolicyState, key: jax.Array, obs_size=None, action_size=None) -> Tuple[jax.Array, PolicyState]:
         # Handle MinAtar observations: reshape from (10, 10, 7) to (7, 10, 10) for Conv2d
-        if obs.shape == (10, 10, 7):  # MinAtar format
-            x = jnp.transpose(obs, (2, 0, 1))  # Transpose to (7, 10, 10) for Conv2d
-        else:
-            x = obs
-        
-        # Apply conv layer
-        x = self.activation(self.conv(x))
+
+        x = jnp.transpose(obs, (2, 0, 1))
+        # Apply conv layers
+        x = self.activation(self.conv1(x))
+        #x = self.activation(self.conv2(x))
+        #x = self.activation(self.conv3(x))
         
         # Flatten and apply hidden FC layer
         x = x.reshape(-1)  # Flatten to 1D
-        x = self.activation(self.fc_hidden(x))
-        
-        # Get single output
-        output = self.output(x)
+        output = self.fc_hidden(x)
+        #output = self.output(output)
+
         
         return output, state
 
@@ -246,9 +240,9 @@ def make_model(config, key):
                     action_dims=action_size,
                     total_nodes=max_nodes,
                     )
-    elif config["model_config"]["network_type"] == "CNN":
+    elif config["model_config"]["network_type"] == "AtariCNN":
 
-        model = CNN(key=key_model,
+        model = AtariCNN(key=key_model,
                     obs_dims=input_size,
                     action_dims=action_size,
                     total_nodes=max_nodes,
