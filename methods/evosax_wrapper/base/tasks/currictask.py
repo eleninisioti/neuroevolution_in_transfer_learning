@@ -46,7 +46,4 @@ class CurricTask(BaseTask):
 
 		fit, info, policy_states, task_params = jax.lax.cond(current_gen <self.gen_switch, lambda x: self.tasks[0](x, subkey, task_params),lambda x: self.tasks[1](x, subkey, task_params), params)
 
-		#fit, data = task(params, subkey, task_params)
-
-		#datas.append(data)
 		return fit, info, policy_states, task_params

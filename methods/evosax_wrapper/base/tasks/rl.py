@@ -162,6 +162,11 @@ class GymnaxTaskWithPerturbation(eqx.Module):
 
 
 
+
+
+
+
+
 class GymnaxTask(eqx.Module):
 	"""
 	"""
@@ -214,6 +219,7 @@ class GymnaxTask(eqx.Module):
 		self, 
 		params: Params, 
 		key: jax.Array, 
+		current_task: int=0,
 		task_params: Optional[TaskParams]=None)->Tuple[State, State, dict]:
 
 		init_env_key, init_policy_key, rollout_key = jr.split(key, 3)
@@ -234,7 +240,7 @@ class GymnaxTask(eqx.Module):
 			jax.debug.print("Action changed to: {}", action)
    
 			action = jnp.argmax(action)
-			obs, gymnax_state, reward, done, _ = self.env.step(key, state.env_state.env_state, action, self.gymnax_env_params)
+			obs, gymnax_state, reward, done, _ = self.env.step(key, state.env_state.env_state, action, self.gymnax_env_params[current_task])
 			env_state = GymnaxState(env_state=gymnax_state, obs=obs, reward=reward, done=done)	
 			new_state = State(env_state=env_state, policy_state=policy_state)
 			
@@ -255,191 +261,274 @@ class GymnaxTask(eqx.Module):
 		data["actions"]  = actions
 		return state, states, data, policy_states
 
-#=======================================================================
-#=======================================================================
-#=======================================================================
-class EcorobotTask(eqx.Module):
+
+
+
+class MinatarMultiTask(eqx.Module):
 	"""
 	"""
 	#-------------------------------------------------------------------
-	env: BraxEnv
+
 	statics: PyTree[...]
 	max_steps: int	
 	num_tasks: int
 	current_task: int
 	reward_for_solved: float
 	data_fn: Callable[[PyTree], dict]
+	gymnax_env_params: PyTree
+	initialize_calls: int
+	call_calls: int
+	rollout_calls:  int
  
-	#-------------------------------------------------------------------
 	def __init__(
 		self, 
 		statics: PyTree[...],
 		env: Union[str, BraxEnv],
 		max_steps: int,
+		obs_size: int,
+		action_size: int,
 		backend: str="mjx",
 		data_fn: Callable=lambda x: x, 
 		env_kwargs: dict={}):
 
-		if isinstance(env, str):
-			self.env = ecorobot_envs.get_environment(env_name=env, backend=backend, **env_kwargs)
-		else:
-			self.env = env
-
 		self.statics = statics
-		self.max_steps = max_steps
+		self.max_steps = 300
 		self.data_fn = data_fn
 		self.num_tasks = 1
 		self.reward_for_solved = 5000
 		self.current_task = 0
+		tasks = []	
+		self.gymnax_env_params = []
+  
+		env_kwargs["noise_range"] = 0.0
+		for sub_env in env:
+			temp_env, params = gymnax.make(env_id=sub_env)
+			self.gymnax_env_params.append(params)
 
-
+			tasks.append(GymnaxTaskWithPerturbation(statics=self.statics,
+												env=sub_env,
+                                obs_size=obs_size,
+                                action_size=action_size,
+                                max_steps=1000,
+                                data_fn=data_fn,
+                                env_kwargs={**env_kwargs}))
+   
+		self.initialize_calls = [task.initialize for task in tasks]
+		self.call_calls = [task.__call__ for task in tasks]
+		self.rollout_calls = [task.rollout for task in tasks]
+   
 	def __call__(
-		self, 
-		params: Params, 
-		key: jax.Array, 
+        self, 
+        params: Params, 
+        key: jax.Array, 
 		task_params: Optional[TaskParams]=None,
-			current_gen: int=0)->Tuple[Float, PyTree]:
+		current_gen: int=0)->Tuple[Float, PyTree]:
+		current_task = (current_gen // 5000) % len(self.initialize_calls)
+		jax.debug.print("current task: {}", current_task)
+		
+		return jax.lax.switch(current_task, self.call_calls, params, key, current_task)
+	
+	def initialize(self, key: jax.Array, current_task) -> EnvState:
+        # For initialization, we need to know which task to use
+		# Since we don't have current_gen here, we'll use task 0 by default
+		return jax.lax.switch(current_task, self.initialize_calls, key)
 
-		_, _, data, policy_states= self.rollout(params, key)
-		return jnp.sum(data["reward"]), data, policy_states, 0.0
+	def rollout(self, params: Params, key: jax.Array,current_task)->Tuple[State, State, dict]:
+		# For rollout, we need to know which task to use
+		# Since we don't have current_gen here, we'll use task 0 by default
+		return jax.lax.switch(current_task, self.rollout_calls, params, key, current_task)
+
+
+
+
+
+
+
+#=======================================================================
+#=======================================================================
+#=======================================================================
+class EcorobotTask(eqx.Module):
+    """
+    """
+    #-------------------------------------------------------------------
+    env: BraxEnv
+    statics: PyTree[...]
+    max_steps: int    
+    num_tasks: int
+    current_task: int
+    reward_for_solved: float
+    data_fn: Callable[[PyTree], dict]
+ 
+    #-------------------------------------------------------------------
+    def __init__(
+        self, 
+        statics: PyTree[...],
+        env: Union[str, BraxEnv],
+        max_steps: int,
+        backend: str="mjx",
+        data_fn: Callable=lambda x: x, 
+        env_kwargs: dict={}):
+
+        if isinstance(env, str):
+            self.env = ecorobot_envs.get_environment(env_name=env, backend=backend, **env_kwargs)
+        else:
+            self.env = env
+
+        self.statics = statics
+        self.max_steps = max_steps
+        self.data_fn = data_fn
+        self.num_tasks = 1
+        self.reward_for_solved = 5000
+        self.current_task = 0
+
+
+    def __call__(
+        self, 
+        params: Params, 
+        key: jax.Array, 
+        task_params: Optional[TaskParams]=None,
+        current_gen: int=0)->Tuple[Float, PyTree]:
+
+        _, _, data, policy_states = self.rollout(params, key)
+        return jnp.sum(data["reward"]), data, policy_states, 0.0
 
  
-	def initialize(self, key: jax.Array, target_function=None) -> EnvState:
+    def initialize(self, key: jax.Array, target_function=None) -> EnvState:
 
-		return self.env.reset(key)
+        return self.env.reset(key)
 
-	def rollout(
-		self, 
-		params: Params, 
-		key: jax.Array, 
-		task_params: Optional[TaskParams]=None)->Tuple[State, State, dict]:
+    def rollout(
+        self, 
+        params: Params, 
+        key: jax.Array, 
+        task_params: Optional[TaskParams]=None)->Tuple[State, State, dict]:
 
-		init_env_key, init_policy_key, rollout_key = jr.split(key, 3)
-		policy = eqx.combine(params, self.statics)
+        init_env_key, init_policy_key, rollout_key = jr.split(key, 3)
+        policy = eqx.combine(params, self.statics)
 
-		policy_state, policy_states = policy.initialize(init_policy_key)
-		env_state = self.initialize(init_env_key)
-		init_state = State(env_state=env_state, policy_state=policy_state)
+        policy_state, policy_states = policy.initialize(init_policy_key)
+        env_state = self.initialize(init_env_key)
+        init_state = State(env_state=env_state, policy_state=policy_state)
 
-		obs_size = self.env.observation_size
-		action_size = self.env.action_size
+        obs_size = self.env.observation_size
+        action_size = self.env.action_size
 
-		def env_step(carry, x):
-			state, key = carry
-			key, _key = jr.split(key)
-			action, policy_state = policy(state.env_state.obs, state.policy_state, _key,obs_size=obs_size,action_size=action_size)
-			env_state = self.env.step(state.env_state, action)
-			new_state = State(env_state=env_state, policy_state=policy_state)
-			
-			return [new_state, key], (state, action)
+        def env_step(carry, x):
+            state, key = carry
+            key, _key = jr.split(key)
+            action, policy_state = policy(state.env_state.obs, state.policy_state, _key,obs_size=obs_size,action_size=action_size)
+            env_state = self.env.step(state.env_state, action)
+            new_state = State(env_state=env_state, policy_state=policy_state)
+            
+            return [new_state, key], (state, action)
 
-		[state, _], (states, actions) = jax.lax.scan(env_step, [init_state, rollout_key], None, self.max_steps)	
-		data = {"policy_states": states.policy_state, "obs": states.env_state.obs}
-		data = self.data_fn(data)
-		data["reward"] = states.env_state.reward
-		data["actions"]  = actions
-		return state, states, data, policy_states
+        [state, _], (states, actions) = jax.lax.scan(env_step, [init_state, rollout_key], None, self.max_steps)    
+        data = {"policy_states": states.policy_state, "obs": states.env_state.obs}
+        data = self.data_fn(data)
+        data["reward"] = states.env_state.reward
+        data["actions"]  = actions
+        return state, states, data, policy_states
 
 class BraxTask(eqx.Module):
-	
-	"""
-	"""
-	#-------------------------------------------------------------------
-	env: BraxEnv
-	statics: PyTree[...]
-	max_steps: int
+    
+    """
+    """
+    #-------------------------------------------------------------------
+    env: BraxEnv
+    statics: PyTree[...]
+    max_steps: int
 
-	num_tasks: int
-	current_task: int
-	reward_for_solved: float
+    num_tasks: int
+    current_task: int
+    reward_for_solved: float
 
-	data_fn: Callable[[PyTree], dict]
-	#-------------------------------------------------------------------
+    data_fn: Callable[[PyTree], dict]
+    #-------------------------------------------------------------------
 
-	def __init__(
-		self, 
-		statics: PyTree[...],
-		env: Union[str, BraxEnv],
-		max_steps: int,
-		backend: str="positional",
-		data_fn: Callable=lambda x: x, 
-		env_kwargs: dict={}):
-		
-		if isinstance(env, str):
-			self.env = brax_envs.get_environment(env, backend=backend, **env_kwargs)
-		else:
-			self.env = env
+    def __init__(
+        self, 
+        statics: PyTree[...],
+        env: Union[str, BraxEnv],
+        max_steps: int,
+        backend: str="positional",
+        data_fn: Callable=lambda x: x, 
+        env_kwargs: dict={}):
+        
+        if isinstance(env, str):
+            self.env = brax_envs.get_environment(env, backend=backend, **env_kwargs)
+        else:
+            self.env = env
 
-		self.statics = statics
-		self.max_steps = max_steps
-		self.data_fn = data_fn
-		self.num_tasks = 1
-		#self.num_tasks = self.env.num_tasks
-		self.reward_for_solved = 5000
-		self.current_task = 0
+        self.statics = statics
+        self.max_steps = max_steps
+        self.data_fn = data_fn
+        self.num_tasks = 1
+        #self.num_tasks = self.env.num_tasks
+        self.reward_for_solved = 5000
+        self.current_task = 0
 
-	#-------------------------------------------------------------------
+    #-------------------------------------------------------------------
 
-	def __call__(
-		self, 
-		params: Params, 
-		key: jax.Array, 
-		task_params: Optional[TaskParams]=None,
-			current_gen: int=0)->Tuple[Float, PyTree]:
+    def __call__(
+        self, 
+        params: Params, 
+        key: jax.Array, 
+        task_params: Optional[TaskParams]=None,
+            current_gen: int=0)->Tuple[Float, PyTree]:
 
-		_, _, data, policy_states= self.rollout(params, key)
-		return jnp.sum(data["reward"]), data, policy_states, 0.0
+        _, _, data, policy_states= self.rollout(params, key)
+        return jnp.sum(data["reward"]), data, policy_states, 0.0
 
-	#-------------------------------------------------------------------
+    #-------------------------------------------------------------------
 
-	def rollout(
-		self, 
-		params: Params, 
-		key: jax.Array, 
-		task_params: Optional[TaskParams]=None)->Tuple[State, State, dict]:
-		
-		init_env_key, init_policy_key, rollout_key = jr.split(key, 3)
-		policy = eqx.combine(params, self.statics)
-		
-		policy_state, policy_states = policy.initialize(init_policy_key)
-		env_state = self.initialize(init_env_key)
-		init_state = State(env_state=env_state, policy_state=policy_state)
-		obs_size = self.env.observation_size
-		action_size = self.env.action_size
-		def env_step(carry, x):
-			state, key = carry
-			key, _key = jr.split(key)
-			action, policy_state = policy(state.env_state.obs, state.policy_state, _key,obs_size=obs_size,action_size=action_size)
-			env_state = self.env.step(state.env_state, action)
-			new_state = State(env_state=env_state, policy_state=policy_state)
-			
-			return [new_state, key], (state, action)
+    def rollout(
+        self, 
+        params: Params, 
+        key: jax.Array, 
+        task_params: Optional[TaskParams]=None)->Tuple[State, State, dict]:
+        
+        init_env_key, init_policy_key, rollout_key = jr.split(key, 3)
+        policy = eqx.combine(params, self.statics)
+        
+        policy_state, policy_states = policy.initialize(init_policy_key)
+        env_state = self.initialize(init_env_key)
+        init_state = State(env_state=env_state, policy_state=policy_state)
+        obs_size = self.env.observation_size
+        action_size = self.env.action_size
+        def env_step(carry, x):
+            state, key = carry
+            key, _key = jr.split(key)
+            action, policy_state = policy(state.env_state.obs, state.policy_state, _key,obs_size=obs_size,action_size=action_size)
+            env_state = self.env.step(state.env_state, action)
+            new_state = State(env_state=env_state, policy_state=policy_state)
+            
+            return [new_state, key], (state, action)
 
-		[state, _], (states, actions) = jax.lax.scan(env_step, [init_state, rollout_key], None, self.max_steps)
-		data = {"policy_states": states.policy_state, "obs": states.env_state.obs}
-		data = self.data_fn(data)
-		first_done = jnp.argmax(states.env_state.done)
-		indexes = jnp.arange(states.env_state.reward.shape[0])
-		data["reward"] = jnp.where(indexes > first_done, 0, states.env_state.reward)
-		data["actions"]  = actions
-		data["reward"] = states.env_state.reward
-		#data["reward"] = states.env_state.reward*(1-states.env_state.done) # do not take into account rewards from steps where the episode is done
-		#data["actions"] = actions
-		return state, states, data, policy_states
+        [state, _], (states, actions) = jax.lax.scan(env_step, [init_state, rollout_key], None, self.max_steps)
+        data = {"policy_states": states.policy_state, "obs": states.env_state.obs}
+        data = self.data_fn(data)
+        first_done = jnp.argmax(states.env_state.done)
+        indexes = jnp.arange(states.env_state.reward.shape[0])
+        data["reward"] = jnp.where(indexes > first_done, 0, states.env_state.reward)
+        data["actions"]  = actions
+        data["reward"] = states.env_state.reward
+        #data["reward"] = states.env_state.reward*(1-states.env_state.done) # do not take into account rewards from steps where the episode is done
+        #data["actions"] = actions
+        return state, states, data, policy_states
 
-	#-------------------------------------------------------------------
+    #-------------------------------------------------------------------
 
-	def step(self, *args, **kwargs):
-		return self.env.step(*args, **kwargs)
+    def step(self, *args, **kwargs):
+        return self.env.step(*args, **kwargs)
 
-	def reset(self, *args, **kwargs):
-		return self.env.reset(*args, **kwargs)
+    def reset(self, *args, **kwargs):
+        return self.env.reset(*args, **kwargs)
 
-	#-------------------------------------------------------------------
+    #-------------------------------------------------------------------
 
-	def initialize(self, key:jax.Array)->EnvState:
-		
-		return self.env.reset(key)
+    def initialize(self, key:jax.Array)->EnvState:
+        
+        return self.env.reset(key)
 
 
 
@@ -650,6 +739,8 @@ class StatefulPolicyWrapper(eqx.Module):
 	#-------------------------------------------------------------------
 	def initialize(self, *args, **kwargs):
 		return None
+
+
 
 
 ENV_SPACES = {

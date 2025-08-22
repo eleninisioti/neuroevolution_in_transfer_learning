@@ -170,7 +170,7 @@ class AtariCNN(eqx.Module):
         key, conv1_key, conv2_key, conv3_key, fc_key, out_key = jr.split(key, 6)
         
         # Define the layers properly using Equinox
-        self.conv1 = nn.Conv2d(4, 16, kernel_size=3, stride=1, key=conv1_key)
+        self.conv1 = nn.Conv2d(obs_dims, 16, kernel_size=3, stride=1, key=conv1_key)
         #self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1, key=conv3_key)
         
         # Calculate feature size after conv layers
@@ -201,6 +201,34 @@ class AtariCNN(eqx.Module):
     def __call__(self, obs: jax.Array, state: PolicyState, key: jax.Array, obs_size=None, action_size=None) -> Tuple[jax.Array, PolicyState]:
         # Handle MinAtar observations: reshape from (10, 10, 7) to (7, 10, 10) for Conv2d
 
+        def pad_last_dim(x):
+            # Current shape
+            *rest, last = x.shape
+            if last == self.obs_dims:
+                return x
+            elif last < self.obs_dims:
+                #jax.debug.print("padding last dim obs: {}", jnp.sum(x))
+                pad_width = [(0, 0)] * (len(x.shape) - 1) + [(0, self.obs_dims - last)]
+                new_obs =   jnp.pad(x, pad_width, mode='constant')
+                #jax.debug.print("after padding: {}", jnp.sum(new_obs))
+
+                return new_obs
+            
+            
+        
+        obs = pad_last_dim(obs)
+
+        """
+        
+        # If obs size is less than self.obs_dims, append zeros to match the expected dimension
+        if obs_size is not None and obs.size < self.obs_dims:
+            padding_size = self.obs_dims - obs.size
+            obs = jnp.concatenate([obs.reshape(-1), jnp.zeros(padding_size)])
+            # Reshape back to original dimensions for the transpose operation
+            obs = obs.reshape(obs.shape[0], obs.shape[1], -1)
+        """
+    
+        
         x = jnp.transpose(obs, (2, 0, 1))
         # Apply conv layers
         x = self.activation(self.conv1(x))

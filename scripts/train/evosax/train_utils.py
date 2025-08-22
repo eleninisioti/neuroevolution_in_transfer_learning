@@ -20,7 +20,7 @@ from methods.evosax_wrapper.base.training.logging  import Logger
 import equinox as eqx
 import evosax
 from methods.evosax_wrapper.base.tasks.rl import GatesTask
-from methods.evosax_wrapper.base.tasks.rl import GymnaxTask, GymnaxTaskWithPerturbation
+from methods.evosax_wrapper.base.tasks.rl import GymnaxTask, GymnaxTaskWithPerturbation, MinatarMultiTask
 
 import wandb
 import gymnax
@@ -68,6 +68,50 @@ class EvosaxExperiment(Experiment):
         self.config["env_config"]["num_tasks"] = self.env.num_tasks
         
         
+    def setup_minatar_multienv(self):
+        self.config["env_config"]["gymnax_env_params"] = []
+        action_size = []
+        obs_size = []
+        
+        if self.config["env_config"]["env_name"] == "asterix_and_breakout":
+            #env_names = ["Breakout-MinAtar", "Asterix-MinAtar", "SpaceInvaders-MinAtar", "Freeway-MinAtar"]
+           # env_names = [ "SpaceInvaders-MinAtar",   "Breakout-MinAtar"]
+            env_names = [ "Breakout-MinAtar", "Asterix-MinAtar", "SpaceInvaders-MinAtar"]
+
+
+
+        obs_sizes = []
+        action_sizes = []
+        self.env = []
+        for env_name in env_names:
+            env, env_params = gymnax.make(env_id=env_name)
+            #if self.config["env_config"]["env_params"]:
+            #    env_params = env_params.replace(**self.config["env_config"]["env_params"])
+            self.config["env_config"]["gymnax_env_params"].append(env_params)
+            obs_size =  env.obs_shape
+            obs_sizes.append(obs_size[-1])
+            action_sizes.append(env.num_actions)
+            print(obs_size)
+            print(env.num_actions)
+            self.env.append(env_name)
+            
+        action_size = max(action_sizes)
+        obs_size = max(obs_sizes)
+        
+
+        
+            
+        self.config["env_config"]["action_size"] = action_size
+        self.config["env_config"]["observation_size"] = obs_size
+        self.config["env_config"]["num_tasks"] = 1
+        self.config["env_config"]["episode_length"] = 1000
+
+        
+        
+        
+        
+        
+        
         
     def setup_gymnax_env(self):
         self.env, env_params = gymnax.make(env_id=self.config["env_config"]["env_name"])
@@ -79,14 +123,18 @@ class EvosaxExperiment(Experiment):
         if  "MountainCar" in self.config["env_config"]["env_name"]:
             obs_size = 2
         elif "MinAtar" in self.config["env_config"]["env_name"]:
-            obs_size =  onp.prod(self.env.obs_shape)
+            obs_size =  self.env.obs_shape[-1]
         else:
             obs_size = self.env.obs_shape[0]
         self.config["env_config"]["observation_size"] = obs_size
 
         self.config["env_config"]["num_tasks"] = 1
         self.config["env_config"]["episode_length"] = self.config["env_config"]["env_params"]["max_steps_in_episode"]
-    
+        
+        
+        
+        
+
 
 
 
@@ -182,6 +230,14 @@ class EvosaxExperiment(Experiment):
         elif self.config["env_config"]["env_type"] == "gymnax":
             self.env = GymnaxTaskWithPerturbation(statics=self.statics,
                                 env=self.config["env_config"]["env_name"],
+                                max_steps=1000,
+                                obs_size=self.config["env_config"]["observation_size"],
+                                action_size=self.config["env_config"]["action_size"],
+                                data_fn=data_fn,
+                                env_kwargs={**self.config["env_config"]["env_params"]})
+        elif self.config["env_config"]["env_type"] == "minatar_multi":
+            self.env = MinatarMultiTask(statics=self.statics,
+                                env=self.env,
                                 max_steps=1000,
                                 obs_size=self.config["env_config"]["observation_size"],
                                 action_size=self.config["env_config"]["action_size"],

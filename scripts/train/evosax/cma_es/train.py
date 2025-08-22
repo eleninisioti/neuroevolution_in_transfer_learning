@@ -100,16 +100,61 @@ def train_gymnax(num_trials, env_name):
     
     # configure method
     num_timesteps = train_gens[env_name]
-    optimizer_name = "SNES"
+    optimizer_name = "SimpleGA"
+    ga_kws = {"sigma_init": 0.5, "elite_ratio":0.5}
     optimizer_config = {"optimizer_name": optimizer_name,
                         "optimizer_type": "evosax",
                         "optimizer_params": {"generations": num_timesteps,
                                              "strategy": optimizer_name,
                                              "popsize": 256,
-                                             "es_kws": {}}}
+                                             "es_kws": ga_kws}}
     
-    model_config = {"network_type": "MLP",
+    model_config = {"network_type": "AtariCNN",
                     "model_params": hyperparams[env_name]}
+
+
+    exp = Experiment(env_config=env_config,
+                     optimizer_config=optimizer_config,
+                     model_config = model_config,
+                     exp_config=exp_config)
+    exp.run()
+    
+    
+    
+def train_minatar_multi(num_trials):
+
+    # configure experiment
+    exp_config = {"seed": 0,
+                  "num_trials": num_trials}
+    
+    
+    env_name = "asterix_and_breakout"
+    
+    # configure environment
+
+    env_config = {"env_type": "minatar_multi",
+                  "env_name": env_name,
+                  "curriculum": False,
+                  "env_params": {}}
+    
+    
+    # configure method
+    num_timesteps = 5000*2*8
+    optimizer_name = "SNES"
+   # optimizer_name = "SimpleGA"
+    ga_kws = {"sigma_init": 0.5, "elite_ratio":0.5}
+    es_kws = {"temperature": 1.0,
+              "sigma_init": 1.0}
+    
+    optimizer_config = {"optimizer_name": optimizer_name,
+                        "optimizer_type": "evosax",
+                        "optimizer_params": {"generations": num_timesteps,
+                                             "strategy": optimizer_name,
+                                             "popsize": 256,
+                                             "es_kws": {**es_kws}}}
+    
+    model_config = {"network_type": "AtariCNN",
+                    "model_params": hyperparams["Breakout-MinAtar"]}
 
 
     exp = Experiment(env_config=env_config,
@@ -139,11 +184,12 @@ def train_gymnax_all(num_trials):
     #train_gymnax(num_trials=num_trials, env_name="MountainCar-v0")
     #train_gymnax(num_trials=num_trials, env_name="CartPole-v1")
     #train_gymnax(num_trials=num_trials, env_name="MountainCarContinuous-v0")
-    train_gymnax(num_trials=num_trials, env_name="Breakout-MinAtar")
-
+    #train_gymnax(num_trials=num_trials, env_name="Breakout-MinAtar")
+    #train_gymnax(num_trials=num_trials, env_name="Asterix-MinAtar")
     #train_gymnax(num_trials=num_trials, env_name="Freeway-MinAtar")
     #train_gymnax(num_trials=num_trials, env_name="SpaceInvaders-MinAtar")
     #train_gymnax(num_trials=num_trials, env_name="Pong-MinAtar")
+    pass
 
 
 
@@ -160,4 +206,5 @@ if __name__ == "__main__":
 
     #train_stepping_gates_all(num_trials=args.num_trials)
     #train_ecorobot_all(num_trials=args.num_trials)
-    train_gymnax_all(num_trials=args.num_trials)
+    #train_gymnax_all(num_trials=args.num_trials)
+    train_minatar_multi(num_trials=args.num_trials)

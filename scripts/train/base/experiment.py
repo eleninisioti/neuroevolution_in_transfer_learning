@@ -83,6 +83,9 @@ class Experiment:
             
         elif self.config["env_config"]["env_type"] == "gymnax":
             self.setup_gymnax_env()
+            
+        elif self.config["env_config"]["env_type"] == "minatar_multi":
+            self.setup_minatar_multienv()
 
         self.task = Task(self.env, self.config)
 
