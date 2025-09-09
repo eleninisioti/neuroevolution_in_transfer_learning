@@ -171,7 +171,4 @@ if __name__ == "__main__":
     parser.add_argument("--num_trials", type=int, help="Number of trials", default=10)
     args = parser.parse_args()
 
-    #train_stepping_gates_all(num_trials=args.num_trials)
-    #train_ecorobot_all(num_trials=args.num_trials)
-    #train_brax_all(num_trials=args.num_trials)
     train_gymnax_all(num_trials=args.num_trials)
