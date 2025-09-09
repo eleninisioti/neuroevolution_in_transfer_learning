@@ -16,6 +16,7 @@ default_env_params = {"n_parity": {"n_input": 6},
                       "Freeway-MinAtar": {"max_steps_in_episode": 2500},
                       "SpaceInvaders-MinAtar": {"max_steps_in_episode": 1000},
                       "Asterix-MinAtar": {"max_steps_in_episode": 5000},
+                      "craftax": {},
                       }
 
 max_rewards = {"n_parity": 0,
@@ -36,6 +37,7 @@ max_rewards = {"n_parity": 0,
                "Freeway-MinAtar": 33,
                "SpaceInvaders-MinAtar": 689,
                "Asterix-MinAtar": 500,
+               "craftax": 500,
                }
 
 

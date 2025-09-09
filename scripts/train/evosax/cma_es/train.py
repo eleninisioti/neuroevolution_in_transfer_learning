@@ -83,7 +83,7 @@ def train_ecorobot(num_trials, env_name, robot_type):
                      exp_config=exp_config)
     exp.run()
     
-def train_gymnax(num_trials, env_name):
+def train_gymnax(num_trials, env_name, optimizer_name):
 
     # configure experiment
     exp_config = {"seed": 0,
@@ -91,8 +91,54 @@ def train_gymnax(num_trials, env_name):
     
     # configure environment
     env_params = default_env_params[env_name]
-    env_params["noise_range"] = 0.0
+    env_params["noise_range"] = 2.0
     env_config = {"env_type": "gymnax",
+                  "env_name": env_name,
+                  "curriculum": False,
+                  "env_params": env_params}
+    
+    
+    # configure method
+    num_timesteps = train_gens[env_name]
+    #optimizer_name = "SimpleGA"
+    ga_kws = {"sigma_init": 0.5, "elite_ratio":0.5}
+    es_kws = {
+              "sigma_init": 0.1, "elite_ratio": 0.5} # chanfws dfrom 1
+    #optimizer_name = "CMA_ES"
+    if optimizer_name == "CMA_ES":
+        opt_kws = es_kws
+        
+    elif optimizer_name == "OpenES":
+        opt_kws = {"sigma_init": 0.3}
+    else:
+        opt_kws = ga_kws
+    optimizer_config = {"optimizer_name": optimizer_name,
+                        "optimizer_type": "evosax",
+                        "optimizer_params": {"generations": num_timesteps,
+                                             "strategy": optimizer_name,
+                                             "popsize": 512,
+                                             "es_kws": opt_kws}}
+    
+    model_config = {"network_type": "MLP",
+                    "model_params": hyperparams[env_name]}
+
+
+    exp = Experiment(env_config=env_config,
+                     optimizer_config=optimizer_config,
+                     model_config = model_config,
+                     exp_config=exp_config)
+    exp.run()
+    
+    
+def train_craftax(num_trials, env_name):
+
+    # configure experiment
+    exp_config = {"seed": 0,
+                  "num_trials": num_trials}
+    
+    # configure environment
+    env_params = default_env_params[env_name]
+    env_config = {"env_type": "craftax",
                   "env_name": env_name,
                   "curriculum": False,
                   "env_params": env_params}
@@ -107,9 +153,9 @@ def train_gymnax(num_trials, env_name):
                         "optimizer_params": {"generations": num_timesteps,
                                              "strategy": optimizer_name,
                                              "popsize": 256,
-                                             "es_kws": ga_kws}}
+                                             "es_kws": {}}}
     
-    model_config = {"network_type": "AtariCNN",
+    model_config = {"network_type": "MLP",
                     "model_params": hyperparams[env_name]}
 
 
@@ -121,7 +167,7 @@ def train_gymnax(num_trials, env_name):
     
     
     
-def train_minatar_multi(num_trials):
+def train_minatar_multi(num_trials, optimizer_name):
 
     # configure experiment
     exp_config = {"seed": 0,
@@ -140,7 +186,6 @@ def train_minatar_multi(num_trials):
     
     # configure method
     num_timesteps = 5000*2*8
-    optimizer_name = "SNES"
    # optimizer_name = "SimpleGA"
     ga_kws = {"sigma_init": 0.5, "elite_ratio":0.5}
     es_kws = {"temperature": 1.0,
@@ -179,8 +224,10 @@ def train_ecorobot_all(num_trials):
     train_ecorobot(num_trials=num_trials, env_name="deceptive_maze_easy", robot_type="discrete_fish")
     train_ecorobot(num_trials=num_trials, env_name="deceptive_maze_easy", robot_type="ant")
 
-def train_gymnax_all(num_trials):
-    #train_gymnax(num_trials=num_trials, env_name="CartPole-v1")
+def train_gymnax_all(num_trials, optimizer_name):
+    train_gymnax(num_trials=num_trials, env_name="Acrobot-v1", optimizer_name=optimizer_name)
+    train_gymnax(num_trials=num_trials, env_name="CartPole-v1", optimizer_name=optimizer_name)
+    train_gymnax(num_trials=num_trials, env_name="MountainCar-v0", optimizer_name=optimizer_name)
     #train_gymnax(num_trials=num_trials, env_name="MountainCar-v0")
     #train_gymnax(num_trials=num_trials, env_name="CartPole-v1")
     #train_gymnax(num_trials=num_trials, env_name="MountainCarContinuous-v0")
@@ -192,6 +239,8 @@ def train_gymnax_all(num_trials):
     pass
 
 
+def train_craftax_all(num_trials):
+    train_craftax(num_trials=num_trials, env_name="craftax")
 
 
 
@@ -201,10 +250,15 @@ def train_gymnax_all(num_trials):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="This script trains Proximal Policy Optimisation on the stepping gates and ecorobot benchmarks")
-    parser.add_argument("--num_trials", type=int, help="Number of trials", default=5)
+    parser.add_argument("--num_trials", type=int, help="Number of trials", default=10)
     args = parser.parse_args()
 
     #train_stepping_gates_all(num_trials=args.num_trials)
     #train_ecorobot_all(num_trials=args.num_trials)
-    #train_gymnax_all(num_trials=args.num_trials)
-    train_minatar_multi(num_trials=args.num_trials)
+    train_gymnax_all(num_trials=args.num_trials, optimizer_name="OpenES")
+
+    #train_gymnax_all(num_trials=args.num_trials, optimizer_name="SimpleGA")
+
+    #train_gymnax_all(num_trials=args.num_trials, optimizer_name="CMA_ES")
+    #train_minatar_multi(num_trials=args.num_trials)
+    #train_craftax_all(num_trials=args.num_trials)

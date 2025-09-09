@@ -106,9 +106,12 @@ class Evaluator:
     def generate_eval_unroll(policy_params: PolicyParams,
                              key: PRNGKey,
                                env_params: dict,
+                               continual_env_params:dict,
 ) -> State:
       reset_keys = jax.random.split(key, num_eval_envs)
-      eval_first_state = eval_env.reset(reset_keys, env_params)
+      #jax.debug.print("noise in evaluator: {}", continual_env_params["noise"])
+
+      eval_first_state = eval_env.reset(reset_keys, gymnax_env_params=env_params, env_params=continual_env_params)
       return generate_unroll(
           eval_env,
           eval_first_state,
@@ -124,13 +127,14 @@ class Evaluator:
                      policy_params: PolicyParams,
                      training_metrics: Metrics,
                     env_params: dict,
+                    continual_env_params:dict,
 
                      aggregate_episodes: bool = True) -> Metrics:
     """Run one epoch of evaluation."""
     self._key, unroll_key = jax.random.split(self._key)
 
     t = time.time()
-    eval_state = self._generate_eval_unroll(policy_params, unroll_key, env_params)
+    eval_state = self._generate_eval_unroll(policy_params, unroll_key, env_params, continual_env_params)
     eval_metrics = eval_state.info['eval_metrics']
     eval_metrics.active_episodes.block_until_ready()
     epoch_eval_time = time.time() - t

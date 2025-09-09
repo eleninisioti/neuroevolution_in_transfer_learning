@@ -86,6 +86,9 @@ class Experiment:
             
         elif self.config["env_config"]["env_type"] == "minatar_multi":
             self.setup_minatar_multienv()
+            
+        elif self.config["env_config"]["env_type"] == "craftax":
+            self.setup_craftax_env()
 
         self.task = Task(self.env, self.config)
 
@@ -103,7 +106,7 @@ class Experiment:
 
         # start logging
         wandb.init(
-            project=self.env_alias + "_noise2",
+            project="alife_abstract_noise2_" + self.config["env_config"]["env_name"],
             name=self.opt_alias,
             tags =  "/trial_" + str(trial),
             config=self.config,

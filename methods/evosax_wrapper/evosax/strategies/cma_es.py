@@ -34,7 +34,7 @@ class EvoParams:
     chi_n: float
     c_m: float = 1.0
     sigma_init: float = 0.065
-    init_min: float = 0.0
+    init_min: float = -0.0
     init_max: float = 0.0
     clip_min: float = -jnp.finfo(jnp.float32).max
     clip_max: float = jnp.finfo(jnp.float32).max
@@ -88,8 +88,8 @@ class CMA_ES(Strategy):
         popsize: int,
         num_dims: Optional[int] = None,
         pholder_params: Optional[Union[chex.ArrayTree, chex.Array]] = None,
-        elite_ratio: float = 0.5,
-        sigma_init: float = 1.0,
+        elite_ratio: float = 0.9,
+        sigma_init: float = 10.0,
         mean_decay: float = 0.0,
         n_devices: Optional[int] = None,
         **fitness_kwargs: Union[bool, int, float]

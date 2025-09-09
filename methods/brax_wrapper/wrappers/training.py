@@ -153,8 +153,8 @@ class EvalMetrics:
 class EvalWrapper(Wrapper):
   """Brax env with eval metrics."""
 
-  def reset(self, rng: jax.Array, env_params: dict) -> State:
-    reset_state = self.env.reset(rng, env_params)
+  def reset(self, rng: jax.Array, gymnax_env_params=None,env_params: jax.Array={}) -> State:
+    reset_state = self.env.reset(rng, gymnax_env_params, env_params)
     reset_state.metrics['reward'] = reset_state.reward
     eval_metrics = EvalMetrics(
         episode_metrics=jax.tree_util.tree_map(

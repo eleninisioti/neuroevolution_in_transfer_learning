@@ -35,8 +35,11 @@ class MLP(eqx.Module):
         self.max_nodes = max_nodes
         self.mlp = nn.MLP(obs_dims,
                           action_dims,
-                        16, 2,
+                        #16, 2,
+                        16,2,
                           activation=linen.relu, final_activation=lambda x: x,
+                                                    #activation=linen.relu, final_activation=lambda x: x,
+
                       key=key, use_bias=True, use_final_bias=True)
 
 
@@ -242,6 +245,14 @@ class AtariCNN(eqx.Module):
 
         
         return output, state
+
+
+
+
+        
+        
+        
+        
 
 
 def make_model(config, key):

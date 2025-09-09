@@ -12,6 +12,7 @@ from brax.envs import Env
 #from brax import envs as brax_envs
 from jaxtyping import Float, PyTree
 import gymnax
+from craftax.craftax.envs.craftax_symbolic_env import CraftaxSymbolicEnvNoAutoReset
 
 Params: TypeAlias = PyTree
 TaskParams: TypeAlias = PyTree
@@ -31,7 +32,150 @@ class GymnaxState(NamedTuple):
     obs: jnp.ndarray
     reward: float
     done: bool
+    
+    
+class CraftaxState(NamedTuple):
+    env_state: EnvState
+    obs: jnp.ndarray
+    reward: float
+    done: bool
+    info: dict
 #=======================================================================
+
+
+
+class CraftaxTask(eqx.Module):
+	"""
+	"""
+	#-------------------------------------------------------------------
+	env: BraxEnv
+	statics: PyTree[...]
+	max_steps: int	
+	num_tasks: int
+	current_task: int
+	reward_for_solved: float
+	data_fn: Callable[[PyTree], dict]
+	gymnax_env_params: PyTree
+	obs_size: int
+	action_size: int
+ 
+	#-------------------------------------------------------------------
+	def __init__(
+		self, 
+		statics: PyTree[...],
+		env: Union[str, BraxEnv],
+		max_steps: int,
+		obs_size: int,
+		action_size: int,
+		backend: str="mjx",
+		data_fn: Callable=lambda x: x, 
+		env_kwargs: dict={}):
+
+		self.env = CraftaxSymbolicEnvNoAutoReset()
+		params = self.env.default_params
+		# Extract environment-specific parameters (excluding custom task parameters)
+		env_params = {k: v for k, v in env_kwargs.items() if hasattr(params, k)}
+		if env_params:
+			params = params.replace(**env_params)
+		self.gymnax_env_params = params
+
+		self.obs_size = obs_size
+		self.action_size = action_size
+
+		self.statics = statics
+		self.max_steps = 500
+		self.data_fn = data_fn
+		self.num_tasks = 1
+		self.reward_for_solved = 5000
+		self.current_task = 0
+  
+
+
+	def reset(self, key: jax.Array, params: Params) -> EnvState:
+		return self.init_env_state
+
+
+	def __call__(
+		self, 
+		params: Params, 
+		key: jax.Array, 
+		task_params: Optional[TaskParams]=None,
+			current_gen: int=0,
+			env_state: Optional=None)->Tuple[Float, PyTree]:
+
+		_, _, data, policy_states, env_state= self.rollout(params, key, env_state=env_state)
+		return jnp.sum(data["reward"]), data, policy_states, 0.0, env_state
+
+ 
+	def initialize(self, key: jax.Array, target_function=None, env_state: Optional[EnvState]=None) -> EnvState:
+
+		return self.env.reset(key, params=self.gymnax_env_params)
+
+	def rollout(
+		self, 
+		params: Params, 
+		key: jax.Array, 
+		task_params: Optional[TaskParams]=None,
+		env_state: Optional=None)->Tuple[State, State, dict]:
+		#jax.debug.print("max steps: {}", self.gymnax_env_params.max_steps_in_episode)
+
+		init_env_key, init_policy_key, rollout_key = jr.split(key, 3)
+		policy = eqx.combine(params, self.statics)
+
+		policy_state, policy_states = policy.initialize(init_policy_key)
+		#obs = obs.reshape(-1)  # Collapse to single dimension
+		#gymnax_state = env_state
+		#obs = self.env.get_obs(gymnax_state)
+  
+		# Initialize info with a consistent structure to avoid pytree structure changes
+		# Use float32 for all values to match the environment's dtype
+		
+
+
+		init_state = State(env_state=env_state, policy_state=policy_state)
+
+		obs_size = self.obs_size
+		action_size = self.action_size
+		# Generate noise that matches the observation shape
+		# Get the actual observation shape from the environment
+		obs_shape = self.env.observation_space(self.gymnax_env_params).shape
+
+
+		def env_step(carry, x):
+			state, key = carry
+			key, _key = jr.split(key)
+			action, policy_state = policy(state.env_state.obs, state.policy_state, _key,obs_size=obs_size,action_size=action_size)
+			#jax.debug.print("action: {}", action)
+
+			action = jnp.argmax(action)
+			obs, gymnax_state, reward, done, info = self.env.step(key, state.env_state.env_state, action, self.gymnax_env_params)
+			#obs = obs.reshape(-1)  # Collapse to single dimension
+
+			#obs = obs + noise
+   
+			#obs = obs.reshape(obs_shape)
+
+			# Merge new info with existing info structure to maintain pytree consistency
+			#merged_info = {**state.env_state.info, **info}
+   
+			env_state = CraftaxState(env_state=gymnax_state, obs=obs, reward=reward, done=done, info=info)
+			new_state = State(env_state=env_state, policy_state=policy_state)
+			return [new_state, key], (state, action)
+
+		[state, _], (states, actions) = jax.lax.scan(env_step, [init_state, rollout_key], None, self.max_steps)	
+		data = {"policy_states": states.policy_state, "obs": states.env_state.obs, "info": states.env_state.info}
+		data = self.data_fn(data)
+		data["reward"] = states.env_state.reward
+		# Find first occurrence of done == True, with fallback
+		first_done = jnp.argmax(states.env_state.done)
+		# If no episode is done, first_done will be 0, but we want to check if any are actually done
+		any_done = jnp.any(states.env_state.done)
+		first_done = jnp.where(any_done, first_done, states.env_state.done.shape[0])
+		indexes = jnp.arange(states.env_state.reward.shape[0])
+		data["reward"] = jnp.where(indexes > first_done, 0, states.env_state.reward)
+		data["info"] = states.env_state.info
+		data["actions"]  = actions
+		return state, states, data, policy_states, env_state
 
 class GymnaxTaskWithPerturbation(eqx.Module):
 	"""
@@ -70,7 +214,7 @@ class GymnaxTaskWithPerturbation(eqx.Module):
 		self.gymnax_env_params = params
 
 		self.obs_size = obs_size
-		self.action_size = action_size
+		self.action_size = action_size 
 
 		self.statics = statics
 		self.max_steps = 300
@@ -78,7 +222,7 @@ class GymnaxTaskWithPerturbation(eqx.Module):
 		self.num_tasks = 1
 		self.reward_for_solved = 5000
 		self.current_task = 0
-		self.perturbe_every_n_gens = 1
+		self.perturbe_every_n_gens = 200
 		#self.noise_range = env_kwargs.get("noise_range", 2.0)  # Default to 2.0 if not specified
 		self.noise_range =  env_kwargs["noise_range"]
 		#self.noise_range = 0.0
@@ -88,10 +232,10 @@ class GymnaxTaskWithPerturbation(eqx.Module):
 		params: Params, 
 		key: jax.Array, 
 		task_params: Optional[TaskParams]=None,
-			current_gen: int=0)->Tuple[Float, PyTree]:
+			current_gen: int=0, env_state: Optional=None, noise=None)->Tuple[Float, PyTree]:
 
-		_, _, data, policy_states= self.rollout(params, key)
-		return jnp.sum(data["reward"]), data, policy_states, 0.0
+		_, _, data, policy_states= self.rollout(params, key, current_gen=current_gen, noise=noise)
+		return jnp.sum(data["reward"]), data, policy_states, 0.0, None
 
  
 	def initialize(self, key: jax.Array, target_function=None) -> EnvState:
@@ -102,7 +246,8 @@ class GymnaxTaskWithPerturbation(eqx.Module):
 		self, 
 		params: Params, 
 		key: jax.Array, 
-		task_params: Optional[TaskParams]=None)->Tuple[State, State, dict]:
+		task_params: Optional[TaskParams]=None,
+  current_gen=None, noise=None)->Tuple[State, State, dict]:
 		#jax.debug.print("max steps: {}", self.gymnax_env_params.max_steps_in_episode)
 
 		init_env_key, init_policy_key, rollout_key = jr.split(key, 3)
@@ -119,13 +264,18 @@ class GymnaxTaskWithPerturbation(eqx.Module):
 		action_size = self.action_size
 		# Generate noise that matches the observation shape
 		# Get the actual observation shape from the environment
-		obs_shape = self.env.obs_shape
-		if len(obs_shape) == 3:
-			# For image observations (like MinAtar): generate noise in image format
-			noise = jax.random.uniform(key, obs_shape, minval=-self.noise_range, maxval=self.noise_range)
-		else:
-			# For flattened observations: generate noise in flattened format
-			noise = jax.random.uniform(key, (obs_size,), minval=-self.noise_range, maxval=self.noise_range)
+
+		"""
+		if current_gen % self.perturbe_every_n_gens == 0 and noise is None:
+			jax.debug.print("noise in evaluator: {}", noise)
+			if len(obs_shape) == 3:
+				# For image observations (like MinAtar): generate noise in image format
+				noise = jax.random.uniform(key, obs_shape, minval=-self.noise_range, maxval=self.noise_range)
+			else:
+				# For flattened observations: generate noise in flattened format
+				noise = jax.random.uniform(key, (obs_size,), minval=-self.noise_range, maxval=self.noise_range)
+        """
+
 
 		def env_step(carry, x):
 			state, key = carry
@@ -137,7 +287,7 @@ class GymnaxTaskWithPerturbation(eqx.Module):
 			obs, gymnax_state, reward, done, _ = self.env.step(key, state.env_state.env_state, action, self.gymnax_env_params)
 			#obs = obs.reshape(-1)  # Collapse to single dimension
 
-			#obs = obs + noise
+			obs = obs + noise
    
 			#obs = obs.reshape(obs_shape)
 

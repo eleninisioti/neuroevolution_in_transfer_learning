@@ -84,9 +84,10 @@ def train(
     episode_length: int,
     save_params_fn,
     gymnax_env_params, # this is needed for gymnax
+    env_params,
     skip_connections_prob: float=0.0,
-    num_neurons: int=32, # number of neurons used in each layer of the policy network. value network will be this times 8
-    num_layers: int=4, # number of layers used in policy network. value network will be this +1
+    num_neurons: int=16, # number of neurons used in each layer of the policy network. value network will be this times 8
+    num_layers: int=2, # number of layers used in policy network. value network will be this +1
     wrap_env: bool = True,
     action_repeat: int = 1,
     num_envs: int = 1,
@@ -260,14 +261,26 @@ def train(
 
   init_env_params = jnp.zeros((1,)).astype(jnp.int32)
   
+  noise_range = 2.0
+  
   if isinstance(environment, envs.Env):
     reset_fn = jax.jit(jax.vmap(env.reset, in_axes=(0)))
 
     env_state = reset_fn(key_envs)
   else:
-    reset_fn = jax.jit(jax.vmap(env.reset, in_axes=(0, None)))
+    reset_fn = jax.jit(jax.vmap(env.reset, in_axes=(0, None, None)))
+        
+    #if self.config["env_config"]["env_name"] == "MountainCar-v0":
+    if env.env.env.env.name == "MountainCar-v0":
+        obs_size = 2
+    else:
+        obs_size = env.obs_shape[0]
+    
+    init_noise = jax.random.normal(key_env, (obs_size,))*noise_range
+    init_env_params = {"noise": init_noise}
 
-    env_state = reset_fn(key_envs, init_env_params)
+    
+    env_state = reset_fn(key_envs, gymnax_env_params,init_env_params)
 
   normalize = lambda x, y: x
   if normalize_observations:
@@ -573,13 +586,15 @@ def train(
         _unpmap(
             (training_state.normalizer_params, training_state.params.policy)),
         training_metrics={},
-    env_params=gymnax_env_params)
+    env_params=gymnax_env_params,
+    continual_env_params={"noise": init_noise})
     logging.info(metrics)
-    progress_fn((0, training_state.env_params, metrics))
+    progress_fn((0, {"noise": init_noise}, metrics))
 
   training_metrics = {}
   training_walltime = 0
   current_step = 0
+  noise = init_noise
   for it in range(num_evals_after_init):
     logging.info('starting iteration %s %s', it, time.time() - xt)
 
@@ -596,7 +611,12 @@ def train(
           lambda x, s: jax.random.split(x[0], s),
           in_axes=(0, None))(key_envs, key_envs.shape[1])
       # TODO: move extra reset logic to the AutoResetWrapper.
-      env_state = reset_fn(key_envs) if num_resets_per_eval > 0 else env_state
+      
+      if it%200 == 0 and it:
+        noise = jax.random.uniform(epoch_key, (obs_size,), minval=-noise_range, maxval=noise_range)
+
+
+      env_state = reset_fn(key_envs, gymnax_env_params, {"noise": noise}) if num_resets_per_eval > 0 else env_state
 
     if process_id == 0:
       # Run evals.
@@ -604,17 +624,22 @@ def train(
           _unpmap(
               (training_state.normalizer_params, training_state.params.policy)),
           training_metrics,
-      gymnax_env_params)
+      gymnax_env_params,
+      {"noise": noise})
 
 
+      """
       def change_task(env_params):
           new_task = jnp.minimum(env_params[0][0] + 1, env.num_tasks).astype(jnp.int32)
           return jnp.array([[new_task]])
+      
 
 
       new_env_params = jax.lax.cond(metrics["eval/episode_reward"] >= env.reward_for_solved,
                                     lambda x: change_task(x), lambda x: x,
                                     training_state.env_params)
+      """
+      new_env_params = training_state.env_params
       
 
       if metrics["eval/episode_reward"] >= env.reward_for_solved:
@@ -627,7 +652,7 @@ def train(
           env_params=new_env_params,
           env_steps=training_state.env_steps )
       logging.info(metrics)
-      progress_fn((current_step, training_state.env_params, metrics))
+      progress_fn((current_step, {"noise": noise}, metrics))
       params = _unpmap(
           (training_state.normalizer_params, training_state.params)
       )

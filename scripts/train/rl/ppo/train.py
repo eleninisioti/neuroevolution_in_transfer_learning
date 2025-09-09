@@ -148,10 +148,13 @@ def train_brax_all(num_trials):
     
     
 def train_gymnax_all(num_trials):
-    #train_gymnax(num_trials=num_trials, env_name="Acrobot-v1")
+    train_gymnax(num_trials=num_trials, env_name="Acrobot-v1")
+    train_gymnax(num_trials=num_trials, env_name="MountainCar-v0")
+    train_gymnax(num_trials=num_trials, env_name="CartPole-v1")
+
     #train_gymnax(num_trials=num_trials, env_name="MountainCar-v0")
     #train_gymnax(num_trials=num_trials, env_name="CartPole-v1")
-    train_gymnax(num_trials=num_trials, env_name="Breakout-MinAtar")
+    #train_gymnax(num_trials=num_trials, env_name="Breakout-MinAtar")
     
 def train_ecorobot_all(num_trials):
     train_ecorobot(num_trials=num_trials, env_name="locomotion", robot_type="halfcheetah")

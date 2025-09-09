@@ -26,7 +26,7 @@ def train_with_wandb():
             # configure environment
             env_params = default_env_params[config.env_name]
             env_params["noise_range"] = 0.0
-            env_config = {"env_type": "gymnax",
+            env_config = {"env_type": "craftax",
                           "env_name": config.env_name,
                           "curriculum": False,
                           "env_params": env_params}
@@ -49,12 +49,16 @@ def train_with_wandb():
             elif config.strategy == "SimpleGA":
                 optimizer_config["optimizer_params"]["es_kws"]["elite_ratio"] = config.elite_ratio
                 optimizer_config["optimizer_params"]["es_kws"]["sigma_init"] = config.sigma_init
+            elif config.strategy == "SAMR_GA":
+                optimizer_config["optimizer_params"]["es_kws"]["elite_ratio"] = config.elite_ratio
+                optimizer_config["optimizer_params"]["es_kws"]["sigma_init"] = config.sigma_init
+                optimizer_config["optimizer_params"]["es_kws"]["sigma_meta"] = config.sigma_meta
             elif config.strategy == "OpenES":
                 # OpenES uses the full es_kws structure from config
                 optimizer_config["optimizer_params"]["es_kws"] = config.es_kws
             
             # Model config
-            model_config = {"network_type": "AtariCNN",
+            model_config = {"network_type": "MLP",
                             "model_params": hyperparams[config.env_name]}
             
             # Experiment config
@@ -193,7 +197,7 @@ def create_simplega_sweep_config(env_name, num_trials=1):
         "method": "grid",
         "name": f"simplega_grid_sweep_{env_name}",
         "metric": {
-            "name": "current_best_fitness",
+            "name": "deepest_level",
             "goal": "maximize"
         },
         "parameters": {
@@ -202,7 +206,7 @@ def create_simplega_sweep_config(env_name, num_trials=1):
             "seed": {"values": [0, 42, 123]},
             "strategy": {"value": "SimpleGA"},
             "popsize": {
-                "values": [1024]
+                "values": [256]
             },
             "elite_ratio": {
                 "values": [0.1, 0.2, 0.3, 0.5, 0.7]
@@ -241,6 +245,39 @@ def create_snes_sweep_config(env_name, num_trials=1):
             },
             "temperature": {
                 "values": [1,10,20,50,100]
+            }
+        }
+    }
+    
+    return sweep_config
+
+
+def create_samrga_sweep_config(env_name, num_trials=1):
+    """Create W&B sweep configuration for SAMR_GA using grid search"""
+    
+    sweep_config = {
+        "method": "grid",
+        "name": f"samrga_grid_sweep_{env_name}",
+        "metric": {
+            "name": "deepest_level",
+            "goal": "maximize"
+        },
+        "parameters": {
+            "env_name": {"value": env_name},
+            "num_trials": {"value": num_trials},
+            "seed": {"values": [0, 42, 123]},
+            "strategy": {"value": "SAMR_GA"},
+            "popsize": {
+                "values": [ 256]
+            },
+            "elite_ratio": {
+                "values": [0.1, 0.2, 0.3, 0.5]
+            },
+            "sigma_init": {
+                "values": [0.01, 0.1, 0.5]
+            },
+            "sigma_meta": {
+                "values": [1.0, 2.0, 5.0]
             }
         }
     }
@@ -320,6 +357,24 @@ def run_snes_sweep(env_name, num_trials=1, project_name="neuroevolution_sweep"):
     wandb.agent(sweep_id, train_with_wandb, count=None)  # count=None runs until completion
 
 
+def run_samrga_sweep(env_name, num_trials=1, project_name="neuroevolution_sweep"):
+    """Initialize and run W&B SAMR_GA sweep"""
+    
+    # Create sweep configuration
+    sweep_config = create_samrga_sweep_config(env_name, num_trials)
+    
+    # Initialize W&B
+    wandb.login()
+    
+    # Create sweep
+    sweep_id = wandb.sweep(sweep_config, project=project_name)
+    print(f"Created SAMR_GA sweep with ID: {sweep_id}")
+    print(f"Sweep configuration: {sweep_config}")
+    
+    # Run the sweep
+    wandb.agent(sweep_id, train_with_wandb, count=None)  # count=None runs until completion
+
+
 def run_both_sweeps(env_name, num_trials=1, project_name="neuroevolution_sweep"):
     """Run both OpenES and CMA-ES sweeps sequentially"""
     
@@ -340,9 +395,9 @@ def run_both_sweeps(env_name, num_trials=1, project_name="neuroevolution_sweep")
 
 
 def run_all_sweeps(env_name, num_trials=1, project_name="neuroevolution_sweep"):
-    """Run all four strategies (OpenES, CMA-ES, SimpleGA, SNES) sequentially"""
+    """Run all five strategies (OpenES, CMA-ES, SimpleGA, SNES, SAMR_GA) sequentially"""
     
-    print(f"Running all four evolutionary strategies for {env_name}")
+    print(f"Running all five evolutionary strategies for {env_name}")
     print("=" * 80)
     
     # Run OpenES sweep first
@@ -367,7 +422,13 @@ def run_all_sweeps(env_name, num_trials=1, project_name="neuroevolution_sweep"):
     print("\n4. Starting SNES sweep...")
     run_snes_sweep(env_name, num_trials, project_name)
     
-    print(f"\nAll four sweeps completed for {env_name}")
+    print("\n" + "=" * 80)
+    
+    # Run SAMR_GA sweep fifth
+    print("\n5. Starting SAMR_GA sweep...")
+    run_samrga_sweep(env_name, num_trials, project_name)
+    
+    print(f"\nAll five sweeps completed for {env_name}")
 
 
 if __name__ == "__main__":
@@ -375,14 +436,15 @@ if __name__ == "__main__":
     parser.add_argument("--env", type=str, help="Environment to sweep", default="Breakout-MinAtar")
     parser.add_argument("--num_trials", type=int, help="Number of trials per configuration", default=1)
     parser.add_argument("--project", type=str, help="W&B project name", default="neuroevolution_sweep")
-    parser.add_argument("--strategy", type=str, choices=["openes", "cmaes", "simplega", "snes", "both", "all"], help="Strategy to sweep", default="snes")
+    parser.add_argument("--strategy", type=str, choices=["openes", "cmaes", "simplega", "snes", "samrga", "both", "all"], help="Strategy to sweep", default="snes")
     args = parser.parse_args()
 
     print(f"Starting W&B {args.strategy.upper()} sweep for {args.env}")
     print(f"Project: {args.project}")
     #run_snes_sweep("Freeway-MinAtar", args.num_trials, args.project)
     #run_snes_sweep("Asterix-MinAtar", args.num_trials, args.project)
-    run_simplega_sweep("Freeway-MinAtar", args.num_trials, args.project)
+    #run_simplega_sweep("craftax", args.num_trials, args.project)
+    run_samrga_sweep("craftax", args.num_trials, args.project)
 
     
     if args.strategy == "openes":
@@ -398,6 +460,8 @@ if __name__ == "__main__":
         run_snes_sweep("Asterix-MinAtar", args.num_trials, args.project)
         #run_snes_sweep(args.env, args.num_trials, args.project)
         #run_snes_sweep(args.env, args.num_trials, args.project)
+    elif args.strategy == "samrga":
+        run_samrga_sweep(args.env, args.num_trials, args.project)
     elif args.strategy == "both":
         run_both_sweeps(args.env, args.num_trials, args.project)
     elif args.strategy == "all":

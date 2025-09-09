@@ -65,20 +65,24 @@ class BaseTrainer(eqx.Module):
 
 	#-------------------------------------------------------------------
 
-	def train_(self, state: TrainState, key: jax.Array, data: Optional[Data]=None)->TrainState:
+	def train_(self, state: TrainState, key: jax.Array, data: Optional[Data]=None, init_env_state: Optional=None)->TrainState:
 
 		def _step(i, c):
-			s, k, task_params = c
+			s, k, task_params, env_state, noise = c
 			k, k_ = jr.split(k)
 			#if self.logger is not None:
 			#	dummy_data = {"fitness": jnp.array([0]), "interm_policies": [], "best_indiv": []}
-			s, data, task_params = self.train_step(s, k_, task_params, i)
+			s, data, task_params, env_state = self.train_step(s, k_, task_params, i, env_state, noise)
+   
+
 
 			def save_params(data):
 				for dev_step in range(self.logger.dev_steps + 1):
 					current_dev = jax.tree_map(lambda x: x[data["best_indiv"], 0, dev_step, ...],
 											   data["interm_policies"])
 					self.logger.save_chkpt(current_dev, task_params, jnp.array(dev_step))
+     
+     
 
 			jax.lax.cond(state.best_fitness >= self.reward_for_solved,
 											   lambda x: save_params(x), lambda x: None, data)
@@ -92,38 +96,52 @@ class BaseTrainer(eqx.Module):
 			
 			# Print message when condition is met
 			
-			self.logger.log(s, data, task_params)
+			self.logger.log(s, data, task_params, noise)
 
-			return [s, k, task_params, should_stop]
+			return [s, k, task_params, should_stop, env_state, noise]
+
+
+
 
 		if self.progress_bar:
 			_step = progress_bar_fori(self.train_steps)(_step) #type: ignore
 
 		task_params_init = 0
+		noise = jax.random.normal(key, (self.obs_size,))*self.noise_range
 
+
+		
 		# Use scan with early termination support
+		
 		def _step_with_early_stop(carry, x):
-			state, key, task_params, should_stop = carry
+			state, key, task_params, should_stop, env_state, noise = carry
 			generation = x
+			new_noise = jax.random.uniform(key, (self.obs_size,), minval=-self.noise_range, maxval=self.noise_range)
+			noise = jax.numpy.where(generation % self.perturbe_every_n_gens == 0, new_noise, noise)
 			
 
 			# If we should stop, return current state without training
+			"""
 			new_carry = jax.lax.cond(
 				should_stop,
-				lambda: [state, key, task_params, should_stop],  # Keep stopped state
-				lambda: _step(generation, (state, key, task_params))  # Continue training
+				lambda: [state, key, task_params, should_stop, env_state],  # Keep stopped state
+				lambda: _step(generation, (state, key, task_params, env_state))  # Continue training
 			)
+			"""
+			new_carry = _step(generation, (state, key, task_params, env_state, noise))
 			
 			# Extract the should_stop flag from the training step result
-			_, _, _, new_should_stop = new_carry
+			_, _, _, new_should_stop, env_state, noise = new_carry
 			
 			# Return (carry, output) pair as required by scan
 			return new_carry, None
 		
+	
+
 		# Run scan with early termination
-		(state, key, task_params, _), _ = jax.lax.scan(
+		(state, key, task_params, _, _,_), _ = jax.lax.scan(
 			_step_with_early_stop, 
-			[state, key, task_params_init, False],  # Use list to match return type
+			[state, key, task_params_init, False, init_env_state, noise],  # Use list to match return type
 			jnp.arange(self.train_steps)
 		)
 		return state
@@ -137,17 +155,17 @@ class BaseTrainer(eqx.Module):
 
 	#-------------------------------------------------------------------
 
-	def init_and_train(self, key: jr.PRNGKey, data: Optional[Data]=None)->Tuple[TrainState, Data]:
+	def init_and_train(self, key: jr.PRNGKey, data: Optional[Data]=None, init_env_state: Optional=None)->Tuple[TrainState, Data]:
 		init_key, train_key = jr.split(key)
 		state = self.initialize(init_key)
-		return self.train(state, train_key, data)
+		return self.train(state, train_key, data, init_env_state)
 
 	#-------------------------------------------------------------------
 
-	def init_and_train_(self, key: jr.PRNGKey, data: Optional[Data]=None)->TrainState:
+	def init_and_train_(self, key: jr.PRNGKey, data: Optional[Data]=None, init_env_state: Optional=None)->TrainState:
 		init_key, train_key = jr.split(key)
 		state = self.initialize(init_key)
-		return self.train_(state, train_key, data)
+		return self.train_(state, train_key, data, init_env_state)
 
 	#-------------------------------------------------------------------
 

@@ -46,6 +46,9 @@ class EvosaxTrainer(BaseTrainer):
 	reward_for_solved: float
 	num_tasks: int
 	pretrained_evosax_state: int
+	obs_size: int
+	noise_range: float
+	perturbe_every_n_gens: int
 	#-------------------------------------------------------------------
 
 	def __init__(
@@ -79,13 +82,15 @@ class EvosaxTrainer(BaseTrainer):
 		self.num_tasks = num_tasks
 		self.save_params_fn = save_params_fn
 		self.pretrained_evosax_state = init_evosax_state
-
+		self.obs_size = task.obs_size
+		self.perturbe_every_n_gens = 200
 		if isinstance(strategy, str):
 			assert popsize is not None
 			self.strategy = self.create_strategy(strategy, popsize, params_shaper.total_params, **es_kws) # type: ignore
 		else:
 			self.strategy = strategy
 		self.wrap_for_monitoring = wrap_for_monitoring
+		self.noise_range = 2.0
 		#if wrap_for_monitoring:
 		#	self.strategy = MonitorWrapper(self.strategy)
 
@@ -98,12 +103,15 @@ class EvosaxTrainer(BaseTrainer):
 		self.params_shaper = params_shaper
 
 		if eval_reps > 1:
-			def _eval_fn(p: Params, k: jr.PRNGKey, tp: Optional[PyTree]=None, current_gen: int=0):
+			def _eval_fn(p: Params, k: jr.PRNGKey, tp: Optional[PyTree]=None, current_gen: int=0, env_state: Optional=None, noise: Optional=None):
 				"""
 				"""
-				fit, info, policy_states, task_params = jax.vmap(task, in_axes=(None,0,None, None))(p, jr.split(k,eval_reps), tp, current_gen)
+				eval_reps = 1
+				fit, info, policy_states, task_params, env_state = jax.vmap(task, in_axes=(None,0,None, None, None, None))(p, jr.split(k,eval_reps), tp, current_gen, env_state,  noise)
 				task_params = task_params[0]
-				return jnp.mean(fit), info, policy_states, task_params
+				env_state = jax.tree_map(lambda x: x[0, ...], env_state)
+    
+				return jnp.mean(fit), info, policy_states, task_params, env_state
 
 			self.task = _eval_fn
 		else :
@@ -132,11 +140,11 @@ class EvosaxTrainer(BaseTrainer):
 
 	#-------------------------------------------------------------------
 
-	def _eval(self, x: jax.Array, key: jax.Array, task_params: PyTree, current_gen: int)->Tuple[jax.Array, PyTree]:
+	def _eval(self, x: jax.Array, key: jax.Array, task_params: PyTree, current_gen: int, env_state: Optional=None, noise: Optional=None)->Tuple[jax.Array, PyTree]:
 		
 		params = self.params_shaper.reshape(x)
-		_eval = jax.vmap(self.task, in_axes=(0, None, None, None))
-		return _eval(params, key, task_params, current_gen)
+		_eval = jax.vmap(self.task, in_axes=(0, None, None, None, 0, None ))
+		return _eval(params, key, task_params, current_gen, env_state, noise)
 
 	#-------------------------------------------------------------------
 
@@ -169,33 +177,15 @@ class EvosaxTrainer(BaseTrainer):
 
 	#-------------------------------------------------------------------
 
-	def train_step(self, state: TrainState, key: jr.PRNGKey, task_params: Optional[TaskParams]=None, current_gen: int=0) -> Tuple[TrainState, Data]:
+	def train_step(self, state: TrainState, key: jr.PRNGKey, task_params: Optional[TaskParams]=None, current_gen: int=0, env_state: Optional=None, noise: Optional=None) -> Tuple[TrainState, Data]:
 		
 		ask_key, eval_key = jr.split(key, 2)
 		x, dummy_state = self.strategy.ask(ask_key, state, self.es_params)
 
 
-		# penalize larger networks
-		def get_size(adj):
 
-			sum_row = jnp.sum(adj, axis=1)
-			sum_col = jnp.sum(adj, axis=2)
-			alive = sum_row + sum_col
-			alive = jnp.where(alive, 1.0, 0.0)
-			max_size = jnp.shape(alive)[1]
-			alive = jnp.sum(alive,axis=1)
-			size = jnp.mean(alive,axis=0)
-			penalty = ((size+1)/max_size) # if 1, the size is big
-			return (1-penalty)
+		fitness, eval_data, interm_policies, temp_task_paramsm, env_state = self.eval(x, eval_key, task_params, current_gen, env_state, noise)
 
-
-		#task_params = jnp.where(current_gen==18, 2, 0)
-		#task_params = jnp.where(current_gen==19, 3, task_params)
-		#task_params = 4
-		fitness, eval_data, interm_policies, temp_task_params = self.eval(x, eval_key, task_params, current_gen)
-		#sizes = jax.vmap(get_size)(jax.tree_map(lambda x: x[:,0,-1,...],interm_policies.adj))
-		#fitness = fitness/sizes
-		#task_params = jnp.max(task_params)
 		def change_task(env_params):
 			new_task = jnp.minimum(env_params + 1, self.num_tasks ).astype(jnp.int32)
 			return new_task
@@ -216,7 +206,7 @@ class EvosaxTrainer(BaseTrainer):
 
 
 
-		return state, {"fitness": fitness, "best_indiv": jnp.argmax(fitness), "data": eval_data, "interm_policies": interm_policies}, new_task_params
+		return state, {"fitness": fitness, "best_indiv": jnp.argmax(fitness), "data": eval_data, "interm_policies": interm_policies}, new_task_params, env_state
 
 	#-------------------------------------------------------------------
 

@@ -18,7 +18,7 @@ class Logger:
 		wandb_log: bool,
 		metrics_fn: Callable[[TrainState, Data], Tuple[Data, Data, int]],
 		ckpt_dir: Optional[str]=None,
-		aim_freq: int=10,
+		aim_freq: int=1,
 		ckpt_freq: int=100,
 		dev_steps: int=0,
 		verbose: bool=False):
@@ -39,7 +39,7 @@ class Logger:
 
 
 
-	def log(self, state: TrainState, data: Data, task_params: jnp.array):
+	def log(self, state: TrainState, data: Data, task_params: jnp.array, noise):
 
 
 
@@ -67,7 +67,7 @@ class Logger:
 
 		num_edges= non_zero_count
 		num_nodes= unique_indexes_count
-		jax.lax.cond(state.gen_counter%self.aim_freq==0, lambda data: self.metrics_fn(state, data, task_params, num_nodes, num_edges), lambda data: None, data)
+		jax.lax.cond(state.gen_counter%self.aim_freq==0, lambda data: self.metrics_fn(state, data, task_params, num_nodes, num_edges, noise), lambda data: None, data)
 
 
 

@@ -20,6 +20,7 @@ from ecorobot import envs as ecorobot_envs
 from envs.stepping_gates.stepping_gates.envs.wrappers import wrap as dgates_wrap
 import wandb
 import gymnax
+import numpy as onp
 
 # Register the hunted environment manually since it was removed from brax registry
 import sys
@@ -81,8 +82,9 @@ class PPOExperiment(Experiment):
         
     def setup_gymnax_env(self):
         self.env, env_params = gymnax.make(env_id=self.config["env_config"]["env_name"])
+        
         env_params = env_params.replace(max_steps_in_episode=200)
-        self.config["env_config"]["env_params"] = env_params
+        self.config["env_config"]["env_params"] = {"noise": 2.0}
         self.config["env_config"]["gymnax_env_params"] = env_params
 
 
@@ -134,18 +136,21 @@ class PPOExperiment(Experiment):
             logging_info = {
                 "current_best_fitness": wandb_info["fitness"],
                 "generation": wandb_info["gen"],
-                "current_task": wandb_info["current_task"]
+                "current_task": wandb_info["current_task"],
+                "noise": env_params["noise"][0]
             }
             wandb.log(logging_info)
 
         total_eval_info = {
             "fitness": metrics["eval/episode_reward"],
             "gen": gen,
-            "current_task": env_params[0][0]}
+            "current_task": 0,
+            "noise": env_params["noise"][0] }
         log(total_eval_info)
         
         print("current best fitness: ", total_eval_info["fitness"])
         print("current task: ", total_eval_info["current_task"])
+        print("noise: ", total_eval_info["noise"])
 
     def eval_task(self, policy_params, tasks, gens, final_policy=False):
         inference_fn = self.final_state["inference_fn"](policy_params)
@@ -161,7 +166,8 @@ class PPOExperiment(Experiment):
         make_inference_fn, params, _, training_state = self.model(environment=self.env,
                                                                   progress_fn=self.progress,
                                                                   save_params_fn=self.save_params,
-                                                                  gymnax_env_params=self.config["env_config"]["env_params"])
+                                                                  gymnax_env_params=self.config["env_config"]["gymnax_env_params"],
+                                                                                                              env_params=self.config["env_config"]["env_params"])
 
         self.final_state = {"inference_fn": make_inference_fn,
                             "params": params,

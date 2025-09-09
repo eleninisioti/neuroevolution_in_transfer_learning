@@ -76,12 +76,12 @@ class VmapWrapper(Wrapper):
     super().__init__(env)
     self.batch_size = batch_size
 
-  def reset(self, rng: jax.Array, env_params: jax.Array={}) -> State:
+  def reset(self, rng: jax.Array, gymnax_env_params=None,env_params: jax.Array={}) -> State:
     if self.batch_size is not None:
       rng = jax.random.split(rng, self.batch_size)
     # gymnax returns (obs, state), but we need just the state
     #obs, gymnax_state = jax.vmap(self.env.reset, in_axes=(0))(rng)
-    state = jax.vmap(self.env.reset, in_axes=(0, None))(rng, env_params)
+    state = jax.vmap(self.env.reset, in_axes=(0, None, None))(rng, gymnax_env_params, env_params)
     # Create Brax State with gymnax_state as pipeline_state
 
     return state
@@ -106,17 +106,17 @@ class EpisodeWrapper(Wrapper):
     self.action_repeat = action_repeat
     self.noise_range = 2.0
 
-  def reset(self, rng: jax.Array, env_params: jax.Array={}) -> State:
-    obs, gymnax_state = self.env.reset(rng, env_params)
+  def reset(self, rng: jax.Array, gymnax_env_params=None,env_params: jax.Array={}) -> State:
+    #jax.debug.print("noise: {}", env_params["noise"])
+    obs, gymnax_state = self.env.reset(rng, gymnax_env_params)
     # Create a Brax State with gymnax_state as pipeline_state
-    init_noise = jax.random.uniform(rng, (obs.shape[0],), minval=-self.noise_range, maxval=self.noise_range)
     state = GymnaxState(
         obs=obs,
         reward=jp.zeros(rng.shape[:-1]),
         done=jp.zeros(rng.shape[:-1], dtype=jp.bool_),
         info={'steps': jp.zeros(rng.shape[:-1]), 'truncation': jp.zeros(rng.shape[:-1])},
         pipeline_state=gymnax_state,
-        noise = init_noise
+        noise = env_params["noise"]
     )
     return state
 
@@ -148,11 +148,12 @@ class EpisodeWrapper(Wrapper):
     done = jp.where(steps >= episode_length, one, state.done)
     
     # adding noise to the obs
-    new_noise = jax.random.uniform(key, (state.obs.shape[0],), minval=-self.noise_range, maxval=self.noise_range)
-    noise = jnp.where(steps == 200, new_noise, state.noise)
-    obs = state.obs + noise
+    #new_noise = jax.random.uniform(key, (state.obs.shape[0],), minval=-self.noise_range, maxval=self.noise_range)
+    #noise = jnp.where(steps == 200, new_noise, state.noise)
+    obs = state.obs + state.noise
+    #obs = state.obs
     state = state.replace(obs=obs)
-    state = state.replace(noise=noise)
+    #state = state.(noise=noise)
     
     state.info['truncation'] = jp.where(
         steps >= episode_length, 1 - state.done, zero
@@ -164,8 +165,8 @@ class EpisodeWrapper(Wrapper):
 class AutoResetWrapper(Wrapper):
   """Automatically resets Brax envs that are done."""
 
-  def reset(self, rng: jax.Array, env_params: jax.Array={}) -> State:
-    state = self.env.reset(rng)
+  def reset(self, rng: jax.Array, gymnax_env_params=None,env_params: jax.Array={}) -> State:
+    state = self.env.reset(rng, gymnax_env_params, env_params)
     state.info['first_pipeline_state'] = state.pipeline_state
     state.info['first_obs'] = state.obs
     return state
@@ -212,8 +213,8 @@ class EvalMetrics:
 class EvalWrapper(Wrapper):
   """Brax env with eval metrics."""
 
-  def reset(self, rng: jax.Array, env_params: dict) -> State:
-    reset_state = self.env.reset(rng, env_params)
+  def reset(self, rng: jax.Array, gymnax_env_params=None,env_params: jax.Array={}) -> State:
+    reset_state = self.env.reset(rng, gymnax_env_params, env_params)
     reset_state.metrics['reward'] = reset_state.reward
     eval_metrics = EvalMetrics(
         episode_metrics=jax.tree_util.tree_map(
