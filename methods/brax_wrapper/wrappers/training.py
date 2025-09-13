@@ -107,13 +107,13 @@ class EpisodeWrapper(Wrapper):
 class AutoResetWrapper(Wrapper):
   """Automatically resets Brax envs that are done."""
 
-  def reset(self, rng: jax.Array, env_params: jax.Array={}) -> State:
+  def reset(self, rng: jax.Array, gymnax_env_params=None,env_params: jax.Array={}) -> State:
     state = self.env.reset(rng)
     state.info['first_pipeline_state'] = state.pipeline_state
     state.info['first_obs'] = state.obs
     return state
 
-  def step(self, state: State, action: jax.Array) -> State:
+  def step(self, state: State, action: jax.Array, env_params=None) -> State:
     if 'steps' in state.info:
       steps = state.info['steps']
       steps = jp.where(state.done, jp.zeros_like(steps), steps)

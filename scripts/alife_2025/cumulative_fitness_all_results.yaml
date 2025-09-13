@@ -1,0 +1,450 @@
+cumulative_fitness_analysis:
+  description: Cumulative fitness by summing all fitness values across all steps averaged
+    across 10 trials
+  tasks:
+    acrobot:
+      cumulative_fitness:
+        CMA-ES:
+          cumulative_fitness_all_steps: -134384.0
+          std: 8743.376361566508
+        GA:
+          cumulative_fitness_all_steps: -128614.2
+          std: 3312.544786112333
+        OpenES:
+          cumulative_fitness_all_steps: -198205.7
+          std: 28079.135150677273
+        PPO:
+          cumulative_fitness_all_steps: -346124.31875
+          std: 24186.778259992476
+      statistical_tests:
+        bonferroni_alpha: 0.008333333333333333
+        group_tests:
+          anova:
+            f_statistic: 252.53796990730459
+            p_value: 3.161655485295356e-24
+          kruskal_wallis:
+            h_statistic: 32.77463414634147
+            p_value: 3.5931825907630327e-07
+        normality_tests:
+          CMA-ES:
+            normal: &id002 !!python/object/apply:numpy.core.multiarray.scalar
+            - &id003 !!python/object/apply:numpy.dtype
+              args:
+              - b1
+              - false
+              - true
+              state: !!python/tuple
+              - 3
+              - '|'
+              - null
+              - null
+              - null
+              - -1
+              - -1
+              - 0
+            - !!binary |
+              AA==
+            p_value: !!python/object/apply:numpy.core.multiarray.scalar
+            - &id001 !!python/object/apply:numpy.dtype
+              args:
+              - f8
+              - false
+              - true
+              state: !!python/tuple
+              - 3
+              - <
+              - null
+              - null
+              - null
+              - -1
+              - -1
+              - 0
+            - !!binary |
+              HDdCoXaOjT8=
+            statistic: !!python/object/apply:numpy.core.multiarray.scalar
+            - *id001
+            - !!binary |
+              iTqcQUCY6T8=
+          GA:
+            normal: *id002
+            p_value: !!python/object/apply:numpy.core.multiarray.scalar
+            - *id001
+            - !!binary |
+              UjNJDy2UmD8=
+            statistic: !!python/object/apply:numpy.core.multiarray.scalar
+            - *id001
+            - !!binary |
+              hBUYYHgt6j8=
+          OpenES:
+            normal: &id004 !!python/object/apply:numpy.core.multiarray.scalar
+            - *id003
+            - !!binary |
+              AQ==
+            p_value: !!python/object/apply:numpy.core.multiarray.scalar
+            - *id001
+            - !!binary |
+              wtGtVvb40j8=
+            statistic: !!python/object/apply:numpy.core.multiarray.scalar
+            - *id001
+            - !!binary |
+              bqjni70w7T8=
+          PPO:
+            normal: *id004
+            p_value: !!python/object/apply:numpy.core.multiarray.scalar
+            - *id001
+            - !!binary |
+              lUKUNfsP0T8=
+            statistic: !!python/object/apply:numpy.core.multiarray.scalar
+            - *id001
+            - !!binary |
+              cth9hiwN7T8=
+        num_comparisons: 6
+        pairwise_tests:
+        - mean1: -346124.31875
+          mean2: -128614.2
+          method1: PPO
+          method2: GA
+          p_value: 0.00018267179110955002
+          p_value_corrected: 0.0010960307466573002
+          significant_corrected: true
+          significant_uncorrected: true
+          statistic: 0.0
+          std1: 24186.778259992476
+          std2: 3312.544786112333
+          test_type: Mann-Whitney U
+        - mean1: -346124.31875
+          mean2: -198205.7
+          method1: PPO
+          method2: OpenES
+          p_value: 5.225742305712439e-10
+          p_value_corrected: 3.1354453834274635e-09
+          significant_corrected: true
+          significant_uncorrected: true
+          statistic: -11.97400833961246
+          std1: 24186.778259992476
+          std2: 28079.135150677273
+          test_type: t-test
+        - mean1: -346124.31875
+          mean2: -134384.0
+          method1: PPO
+          method2: CMA-ES
+          p_value: 0.00018267179110955002
+          p_value_corrected: 0.0010960307466573002
+          significant_corrected: true
+          significant_uncorrected: true
+          statistic: 0.0
+          std1: 24186.778259992476
+          std2: 8743.376361566508
+          test_type: Mann-Whitney U
+        - mean1: -128614.2
+          mean2: -198205.7
+          method1: GA
+          method2: OpenES
+          p_value: 0.00024612812790522973
+          p_value_corrected: 0.0014767687674313783
+          significant_corrected: true
+          significant_uncorrected: true
+          statistic: 99.0
+          std1: 3312.544786112333
+          std2: 28079.135150677273
+          test_type: Mann-Whitney U
+        - mean1: -128614.2
+          mean2: -134384.0
+          method1: GA
+          method2: CMA-ES
+          p_value: 0.12122450301291662
+          p_value_corrected: 0.7273470180774997
+          significant_corrected: false
+          significant_uncorrected: false
+          statistic: 71.0
+          std1: 3312.544786112333
+          std2: 8743.376361566508
+          test_type: Mann-Whitney U
+        - mean1: -198205.7
+          mean2: -134384.0
+          method1: OpenES
+          method2: CMA-ES
+          p_value: 0.00043963875262656454
+          p_value_corrected: 0.002637832515759387
+          significant_corrected: true
+          significant_uncorrected: true
+          statistic: 3.0
+          std1: 28079.135150677273
+          std2: 8743.376361566508
+          test_type: Mann-Whitney U
+    cartpole:
+      cumulative_fitness:
+        CMA-ES:
+          cumulative_fitness_all_steps: 341348.5
+          std: 37262.92183726338
+        GA:
+          cumulative_fitness_all_steps: 285272.3
+          std: 45453.69516342978
+        OpenES:
+          cumulative_fitness_all_steps: 225220.8
+          std: 32580.034716985796
+        PPO:
+          cumulative_fitness_all_steps: 79326.9703125
+          std: 30141.137126956834
+      statistical_tests:
+        bonferroni_alpha: 0.008333333333333333
+        group_tests:
+          anova:
+            f_statistic: 84.38925558398452
+            p_value: 2.3684697052281376e-16
+          kruskal_wallis:
+            h_statistic: 32.08724542468327
+            p_value: 5.016510519717063e-07
+        normality_tests:
+          CMA-ES:
+            normal: *id004
+            p_value: !!python/object/apply:numpy.core.multiarray.scalar
+            - *id001
+            - !!binary |
+              9B0OK3Yxzz8=
+            statistic: !!python/object/apply:numpy.core.multiarray.scalar
+            - *id001
+            - !!binary |
+              hNLctoDv7D8=
+          GA:
+            normal: *id004
+            p_value: !!python/object/apply:numpy.core.multiarray.scalar
+            - *id001
+            - !!binary |
+              LrqfYuffyz8=
+            statistic: !!python/object/apply:numpy.core.multiarray.scalar
+            - *id001
+            - !!binary |
+              TD0oetXK7D8=
+          OpenES:
+            normal: *id004
+            p_value: !!python/object/apply:numpy.core.multiarray.scalar
+            - *id001
+            - !!binary |
+              ZdYK6A3F4T8=
+            statistic: !!python/object/apply:numpy.core.multiarray.scalar
+            - *id001
+            - !!binary |
+              QgBmQSoW7j8=
+          PPO:
+            normal: *id002
+            p_value: !!python/object/apply:numpy.core.multiarray.scalar
+            - *id001
+            - !!binary |
+              gWUQODDQMD8=
+            statistic: !!python/object/apply:numpy.core.multiarray.scalar
+            - *id001
+            - !!binary |
+              3FgK9fn65D8=
+        num_comparisons: 6
+        pairwise_tests:
+        - mean1: 79326.9703125
+          mean2: 285272.3
+          method1: PPO
+          method2: GA
+          p_value: 0.00017761066068896375
+          p_value_corrected: 0.0010656639641337825
+          significant_corrected: true
+          significant_uncorrected: true
+          statistic: 0.0
+          std1: 30141.137126956834
+          std2: 45453.69516342978
+          test_type: Mann-Whitney U
+        - mean1: 79326.9703125
+          mean2: 225220.8
+          method1: PPO
+          method2: OpenES
+          p_value: 0.00017761066068896375
+          p_value_corrected: 0.0010656639641337825
+          significant_corrected: true
+          significant_uncorrected: true
+          statistic: 0.0
+          std1: 30141.137126956834
+          std2: 32580.034716985796
+          test_type: Mann-Whitney U
+        - mean1: 79326.9703125
+          mean2: 341348.5
+          method1: PPO
+          method2: CMA-ES
+          p_value: 0.00017761066068896375
+          p_value_corrected: 0.0010656639641337825
+          significant_corrected: true
+          significant_uncorrected: true
+          statistic: 0.0
+          std1: 30141.137126956834
+          std2: 37262.92183726338
+          test_type: Mann-Whitney U
+        - mean1: 285272.3
+          mean2: 225220.8
+          method1: GA
+          method2: OpenES
+          p_value: 0.004734181702911974
+          p_value_corrected: 0.028405090217471844
+          significant_corrected: true
+          significant_uncorrected: true
+          statistic: 3.2214148708509245
+          std1: 45453.69516342978
+          std2: 32580.034716985796
+          test_type: t-test
+        - mean1: 285272.3
+          mean2: 341348.5
+          method1: GA
+          method2: CMA-ES
+          p_value: 0.01035569488085949
+          p_value_corrected: 0.06213416928515694
+          significant_corrected: false
+          significant_uncorrected: true
+          statistic: -2.8622214041753646
+          std1: 45453.69516342978
+          std2: 37262.92183726338
+          test_type: t-test
+        - mean1: 225220.8
+          mean2: 341348.5
+          method1: OpenES
+          method2: CMA-ES
+          p_value: 1.4435202295846275e-06
+          p_value_corrected: 8.661121377507765e-06
+          significant_corrected: true
+          significant_uncorrected: true
+          statistic: -7.038424472894922
+          std1: 32580.034716985796
+          std2: 37262.92183726338
+          test_type: t-test
+    mountaincar:
+      cumulative_fitness:
+        CMA-ES:
+          cumulative_fitness_all_steps: -386806.4
+          std: 11648.981115960314
+        GA:
+          cumulative_fitness_all_steps: -369260.1
+          std: 9580.037937816322
+        OpenES:
+          cumulative_fitness_all_steps: -358137.6
+          std: 18168.02347092275
+        PPO:
+          cumulative_fitness_all_steps: -388544.7671875
+          std: 1409.8389204883063
+      statistical_tests:
+        bonferroni_alpha: 0.008333333333333333
+        group_tests:
+          anova:
+            f_statistic: 13.688008451660691
+            p_value: 4.093526727031036e-06
+          kruskal_wallis:
+            h_statistic: 25.000975609756097
+            p_value: 1.543324769861871e-05
+        normality_tests:
+          CMA-ES:
+            normal: *id004
+            p_value: !!python/object/apply:numpy.core.multiarray.scalar
+            - *id001
+            - !!binary |
+              WMNFtORUvT8=
+            statistic: !!python/object/apply:numpy.core.multiarray.scalar
+            - *id001
+            - !!binary |
+              xJwPHNIA7D8=
+          GA:
+            normal: *id004
+            p_value: !!python/object/apply:numpy.core.multiarray.scalar
+            - *id001
+            - !!binary |
+              gKXwTTW+7j8=
+            statistic: !!python/object/apply:numpy.core.multiarray.scalar
+            - *id001
+            - !!binary |
+              YQKOT5JV7z8=
+          OpenES:
+            normal: *id004
+            p_value: !!python/object/apply:numpy.core.multiarray.scalar
+            - *id001
+            - !!binary |
+              Vv/EkUUOwj8=
+            statistic: !!python/object/apply:numpy.core.multiarray.scalar
+            - *id001
+            - !!binary |
+              yQrFLyVB7D8=
+          PPO:
+            normal: *id002
+            p_value: !!python/object/apply:numpy.core.multiarray.scalar
+            - *id001
+            - !!binary |
+              RdjvLNhKpT8=
+            statistic: !!python/object/apply:numpy.core.multiarray.scalar
+            - *id001
+            - !!binary |
+              OM2p1bPP6j8=
+        num_comparisons: 6
+        pairwise_tests:
+        - mean1: -388544.7671875
+          mean2: -369260.1
+          method1: PPO
+          method2: GA
+          p_value: 0.00018267179110955002
+          p_value_corrected: 0.0010960307466573002
+          significant_corrected: true
+          significant_uncorrected: true
+          statistic: 0.0
+          std1: 1409.8389204883063
+          std2: 9580.037937816322
+          test_type: Mann-Whitney U
+        - mean1: -388544.7671875
+          mean2: -358137.6
+          method1: PPO
+          method2: OpenES
+          p_value: 0.00018267179110955002
+          p_value_corrected: 0.0010960307466573002
+          significant_corrected: true
+          significant_uncorrected: true
+          statistic: 0.0
+          std1: 1409.8389204883063
+          std2: 18168.02347092275
+          test_type: Mann-Whitney U
+        - mean1: -388544.7671875
+          mean2: -386806.4
+          method1: PPO
+          method2: CMA-ES
+          p_value: 0.47267559351158717
+          p_value_corrected: 1.0
+          significant_corrected: false
+          significant_uncorrected: false
+          statistic: 40.0
+          std1: 1409.8389204883063
+          std2: 11648.981115960314
+          test_type: Mann-Whitney U
+        - mean1: -369260.1
+          mean2: -358137.6
+          method1: GA
+          method2: OpenES
+          p_value: 0.12163220549596747
+          p_value_corrected: 0.7297932329758048
+          significant_corrected: false
+          significant_uncorrected: false
+          statistic: -1.624585147904316
+          std1: 9580.037937816322
+          std2: 18168.02347092275
+          test_type: t-test
+        - mean1: -369260.1
+          mean2: -386806.4
+          method1: GA
+          method2: CMA-ES
+          p_value: 0.002613486023024742
+          p_value_corrected: 0.015680916138148454
+          significant_corrected: true
+          significant_uncorrected: true
+          statistic: 3.4901100452784815
+          std1: 9580.037937816322
+          std2: 11648.981115960314
+          test_type: t-test
+        - mean1: -358137.6
+          mean2: -386806.4
+          method1: OpenES
+          method2: CMA-ES
+          p_value: 0.0008681141360602055
+          p_value_corrected: 0.005208684816361234
+          significant_corrected: true
+          significant_uncorrected: true
+          statistic: 3.98512815148131
+          std1: 18168.02347092275
+          std2: 11648.981115960314
+          test_type: t-test

@@ -108,6 +108,9 @@ class PPOExperiment(Experiment):
                                                       **self.config["env_config"]["env_params"])
         self.env.reward_for_solved = max_rewards[self.config["env_config"]["env_name"]]
         self.env.num_tasks = 1
+        self.config["env_config"]["gymnax_env_params"] = None
+        self.config["env_config"]["env_params"] = {"noise": 0.0, "env_name": self.config["env_config"]["env_name"], "params": self.config["env_config"]["env_params"]}
+
         self.config["env_config"]["action_size"] = self.env.action_size
         self.config["env_config"]["observation_size"] = self.env.observation_size
         self.config["env_config"]["episode_length"] = 1000
@@ -137,20 +140,28 @@ class PPOExperiment(Experiment):
                 "current_best_fitness": wandb_info["fitness"],
                 "generation": wandb_info["gen"],
                 "current_task": wandb_info["current_task"],
-                "noise": env_params["noise"][0]
+                "gravity_multiplier": wandb_info["gravity_multiplier"],
+                #"noise": env_params["noise"][0]
             }
             wandb.log(logging_info)
 
+        # Extract gravity from env_params
+        current_gravity = env_params.get("gravity", 1.0)  # Default to 1.0 if not present
+        
         total_eval_info = {
             "fitness": metrics["eval/episode_reward"],
             "gen": gen,
             "current_task": 0,
-            "noise": env_params["noise"][0] }
+            "gravity_multiplier": current_gravity,
+            #"noise": env_params["noise"][0]
+        }
         log(total_eval_info)
+    
         
         print("current best fitness: ", total_eval_info["fitness"])
         print("current task: ", total_eval_info["current_task"])
-        print("noise: ", total_eval_info["noise"])
+        print("gravity multiplier: ", total_eval_info["gravity_multiplier"])
+        #print("noise: ", total_eval_info["noise"])
 
     def eval_task(self, policy_params, tasks, gens, final_policy=False):
         inference_fn = self.final_state["inference_fn"](policy_params)

@@ -1,0 +1,27 @@
+exp_config:
+  wandb_project: None
+  n_trials: 1
+  upload_benchmark: False
+  log: 1
+env_config:
+  env_name: None
+  env_type: None
+  curriculum: False
+  env_params: {  }
+model_config:
+  model_name: None
+  model_params: {"mut_node": 0.1,
+                 "mut_conn": 0.1,
+                 "node_add": 0.1,
+                 "conn_add": 0.2,
+                 "node_delete": 0.1,
+                 "conn_delete": 0.2}
+optimizer_config:
+  optimizer_name: N
+  optimizer_type: tensorneat
+  optimizer_params:
+    generations: None
+    popsize: 1024
+    n_devices: 1
+    eval_reps: 2
+    wrap_for_monitoring: False

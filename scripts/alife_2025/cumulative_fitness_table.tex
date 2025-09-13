@@ -1,0 +1,141 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{longtable}
+
+% Define custom colors for methods
+\definecolor{ppo}{HTML}{ff595e}
+\definecolor{ga}{HTML}{ffca3a}
+\definecolor{openes}{HTML}{8ac926}
+\definecolor{cmaes}{HTML}{1982c4}
+
+% Page setup for better table display
+\geometry{margin=1in}
+\pagestyle{empty}
+
+\begin{document}
+
+\begin{center}
+\Large\textbf{Cumulative Fitness Results with Statistical Analysis}
+\vspace{0.5cm}
+\normalsize Cumulative fitness by summing fitness values at specific steps with statistical testing.
+\vspace{0.5cm}
+\end{center}
+
+\section{Acrobot}
+
+\begin{table}[h!]
+\centering
+\caption{Acrobot - Cumulative Fitness Results}
+\begin{tabular}{|l|l|r|r|}
+\hline
+\textbf{Task} & \textbf{Method} & \textbf{Cumulative Fitness} & \textbf{Std Dev} \\
+\hline\hline
+\multirow{4}{*}{\textbf{Acrobot}} & \rowcolor{ppo!20}PPO & -1,661.60 & 202.92 \\
+\cline{2-4}
+ & \rowcolor{ga!20}GA & -638.20 & 15.56 \\
+\cline{2-4}
+ & \rowcolor{openes!20}OpenES & -932.20 & 126.55 \\
+\cline{2-4}
+ & \rowcolor{cmaes!20}CMA-ES & -1,437.00 & 211.36 \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[h!]
+\centering
+\caption{Acrobot - Statistical Tests}
+\begin{tabular}{|l|l|r|r|c|}
+\hline
+\textbf{Method 1} & \textbf{Method 2} & \textbf{Test} & \textbf{p-value} & \textbf{Sig.} \\
+\hline\hline
+PPO & GA & t-test & 0.000 & $*$ \\
+PPO & OpenES & t-test & 0.000 & $*$ \\
+PPO & CMA-ES & t-test & 0.202 &  \\
+GA & OpenES & t-test & 0.000 & $*$ \\
+GA & CMA-ES & t-test & 0.000 & $*$ \\
+OpenES & CMA-ES & t-test & 0.000 & $*$ \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Cartpole}
+
+\begin{table}[h!]
+\centering
+\caption{Cartpole - Cumulative Fitness Results}
+\begin{tabular}{|l|l|r|r|}
+\hline
+\textbf{Task} & \textbf{Method} & \textbf{Cumulative Fitness} & \textbf{Std Dev} \\
+\hline\hline
+\multirow{4}{*}{\textbf{Cartpole}} & \rowcolor{ppo!20}PPO & 464.19 & 92.73 \\
+\cline{2-4}
+ & \rowcolor{ga!20}GA & 1,481.30 & 210.50 \\
+\cline{2-4}
+ & \rowcolor{openes!20}OpenES & 1,188.10 & 161.58 \\
+\cline{2-4}
+ & \rowcolor{cmaes!20}CMA-ES & 670.40 & 228.30 \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[h!]
+\centering
+\caption{Cartpole - Statistical Tests}
+\begin{tabular}{|l|l|r|r|c|}
+\hline
+\textbf{Method 1} & \textbf{Method 2} & \textbf{Test} & \textbf{p-value} & \textbf{Sig.} \\
+\hline\hline
+PPO & GA & t-test & 0.000 & $*$ \\
+PPO & OpenES & t-test & 0.000 & $*$ \\
+PPO & CMA-ES & t-test & 0.131 &  \\
+GA & OpenES & t-test & 0.023 & $*$ \\
+GA & CMA-ES & t-test & 0.000 & $*$ \\
+OpenES & CMA-ES & t-test & 0.000 & $*$ \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Mountaincar}
+
+\begin{table}[h!]
+\centering
+\caption{Mountaincar - Cumulative Fitness Results}
+\begin{tabular}{|l|l|r|r|}
+\hline
+\textbf{Task} & \textbf{Method} & \textbf{Cumulative Fitness} & \textbf{Std Dev} \\
+\hline\hline
+\multirow{4}{*}{\textbf{Mountaincar}} & \rowcolor{ppo!20}PPO & -1,916.63 & 10.07 \\
+\cline{2-4}
+ & \rowcolor{ga!20}GA & -1,769.80 & 63.34 \\
+\cline{2-4}
+ & \rowcolor{openes!20}OpenES & -1,709.90 & 95.11 \\
+\cline{2-4}
+ & \rowcolor{cmaes!20}CMA-ES & -2,000.00 & 0.00 \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[h!]
+\centering
+\caption{Mountaincar - Statistical Tests}
+\begin{tabular}{|l|l|r|r|c|}
+\hline
+\textbf{Method 1} & \textbf{Method 2} & \textbf{Test} & \textbf{p-value} & \textbf{Sig.} \\
+\hline\hline
+PPO & GA & Mann-Whitney U & 0.001 & $*$ \\
+PPO & OpenES & Mann-Whitney U & 0.001 & $*$ \\
+PPO & CMA-ES & Mann-Whitney U & 0.000 & $*$ \\
+GA & OpenES & t-test & 0.799 &  \\
+GA & CMA-ES & t-test & 0.000 & $*$ \\
+OpenES & CMA-ES & t-test & 0.000 & $*$ \\
+\hline
+\end{tabular}
+\end{table}
+
+\end{document}

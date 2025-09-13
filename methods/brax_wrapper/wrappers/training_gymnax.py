@@ -104,7 +104,7 @@ class EpisodeWrapper(Wrapper):
     super().__init__(env)
     self.episode_length = episode_length
     self.action_repeat = action_repeat
-    self.noise_range = 2.0
+    self.noise_range = 0.0
 
   def reset(self, rng: jax.Array, gymnax_env_params=None,env_params: jax.Array={}) -> State:
     #jax.debug.print("noise: {}", env_params["noise"])

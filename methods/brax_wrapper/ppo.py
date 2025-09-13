@@ -43,12 +43,14 @@ import numpy as np
 import optax
 from orbax import checkpoint as ocp
 from methods.brax_wrapper.wrappers.training import wrap as brax_wrap
+from methods.brax_wrapper.continual_utils import recreate_environment_with_gravity
 from methods.brax_wrapper.wrappers.training_gymnax import wrap as gymnax_wrap
 #from brax.envs.wrappers.training import wrap as brax_wrap
 import gymnax
 from envs.stepping_gates.stepping_gates.envs.wrappers import wrap as dgates_wrap
 import gymnasium
 import numpy as onp
+from methods.brax_wrapper.continual_utils import modify_gravity_directly 
 InferenceParams = Tuple[running_statistics.NestedMeanStd, Params]
 Metrics = types.Metrics
 
@@ -114,8 +116,9 @@ def train(
     network_factory_with_skip: types.NetworkFactory[
         ppo_networks.PPONetworks
     ] = ppo_networks.make_ppo_networks,
-
-    progress_fn: Callable[[int, Metrics], None] = lambda *args: None,
+    gravity_change_frequency: int = 3,  # ADD THIS LINE
+    gravity_range: Tuple[float, float] = (0.5, 2.0),  # ADD THIS LINE
+    progress_fn: Callable[[int, dict, Metrics], None] = lambda *args: None,
     normalize_advantage: bool = True,
     eval_env: Optional[envs.Env] = None,
     policy_params_fn: Callable[..., None] = lambda *args: None,
@@ -123,7 +126,6 @@ def train(
         Callable[[base.System, jnp.ndarray], Tuple[base.System, base.System]]
     ] = None,
     restore_checkpoint_path: Optional[str] = None,
-
 ):
   """PPO training.
 
@@ -175,6 +177,8 @@ def train(
     randomization_fn: a user-defined callback function that generates randomized
       environments
     restore_checkpoint_path: the path used to restore previous model params
+    gravity_change_frequency: frequency (in iterations) to change gravity
+    gravity_range: tuple of (min, max) gravity multiplier values
 
   Returns:
     Tuple of (make_policy function, network params, metrics)
@@ -220,6 +224,9 @@ def train(
   key_policy, key_value = jax.random.split(global_key)
   del global_key
 
+  # Initialize gravity
+  current_gravity = 1.0  # Start with normal gravity
+
   assert num_envs % device_count == 0
 
   env = environment
@@ -261,20 +268,17 @@ def train(
 
   init_env_params = jnp.zeros((1,)).astype(jnp.int32)
   
-  noise_range = 2.0
-  
+  init_noise = 0.0
   if isinstance(environment, envs.Env):
     reset_fn = jax.jit(jax.vmap(env.reset, in_axes=(0)))
 
     env_state = reset_fn(key_envs)
+    
+    init_env_params = {"noise": [0.0]}
   else:
     reset_fn = jax.jit(jax.vmap(env.reset, in_axes=(0, None, None)))
         
-    #if self.config["env_config"]["env_name"] == "MountainCar-v0":
-    if env.env.env.env.name == "MountainCar-v0":
-        obs_size = 2
-    else:
-        obs_size = env.obs_shape[0]
+
     
     init_noise = jax.random.normal(key_env, (obs_size,))*noise_range
     init_env_params = {"noise": init_noise}
@@ -589,7 +593,7 @@ def train(
     env_params=gymnax_env_params,
     continual_env_params={"noise": init_noise})
     logging.info(metrics)
-    progress_fn((0, {"noise": init_noise}, metrics))
+    progress_fn((0, {"noise": init_noise, "gravity": current_gravity}, metrics))
 
   training_metrics = {}
   training_walltime = 0
@@ -612,8 +616,57 @@ def train(
           in_axes=(0, None))(key_envs, key_envs.shape[1])
       # TODO: move extra reset logic to the AutoResetWrapper.
       
-      if it%200 == 0 and it:
-        noise = jax.random.uniform(epoch_key, (obs_size,), minval=-noise_range, maxval=noise_range)
+      #if it%200 == 0 and it:
+      #  noise = jax.random.uniform(epoch_key, (obs_size,), minval=-noise_range, maxval=noise_range)
+        
+        
+        
+       # Change gravity periodically
+      if it % gravity_change_frequency == 0 and it:
+        current_gravity = jax.random.uniform(
+            epoch_key, (), 
+            minval=gravity_range[0], 
+            maxval=gravity_range[1]
+        )
+        
+        # Recreate environment with new gravity
+        env, modified_xml_path = recreate_environment_with_gravity(
+            env_params["env_name"], env_params["params"],
+            current_gravity, 
+            save_file=True
+        )
+        
+        # Recreate the wrapped environment
+        if wrap_env:
+            if isinstance(env, envs.Env):
+                env = brax_wrap(
+                    env,
+                    episode_length=episode_length,
+                    action_repeat=action_repeat,
+                    randomization_fn=v_randomization_fn,
+                )
+            elif gymnax_env==True:
+                env = gymnax_wrap(
+                    env,
+                    episode_length=episode_length,
+                    action_repeat=action_repeat,
+                    randomization_fn=v_randomization_fn,
+                )
+            else:
+                env = dgates_wrap(
+                    env,
+                    episode_length=episode_length,
+                    action_repeat=action_repeat,
+                    randomization_fn=v_randomization_fn,
+                )
+        
+        # Update the reset function
+        reset_fn = jax.jit(jax.vmap(env.reset, in_axes=(0)))
+        
+        logging.info(f'Changed gravity to {current_gravity}x normal gravity')
+        logging.info(f'Modified XML saved to: {modified_xml_path}')
+      # todo
+      
 
 
       env_state = reset_fn(key_envs, gymnax_env_params, {"noise": noise}) if num_resets_per_eval > 0 else env_state
@@ -651,8 +704,52 @@ def train(
           normalizer_params=training_state.normalizer_params,
           env_params=new_env_params,
           env_steps=training_state.env_steps )
+      # Update gravity BEFORE calling progress_fn
+      if it % gravity_change_frequency == 0 and it:
+        current_gravity = jax.random.uniform(
+            epoch_key, (), 
+            minval=gravity_range[0], 
+            maxval=gravity_range[1]
+        )
+        
+        # Recreate environment with new gravity
+        env, modified_xml_path = recreate_environment_with_gravity(
+            environment, 
+            current_gravity, 
+            save_file=True
+        )
+        
+        # Recreate the wrapped environment
+        if wrap_env:
+            if isinstance(env, envs.Env):
+                env = brax_wrap(
+                    env,
+                    episode_length=episode_length,
+                    action_repeat=action_repeat,
+                    randomization_fn=v_randomization_fn,
+                )
+            elif gymnax_env==True:
+                env = gymnax_wrap(
+                    env,
+                    episode_length=episode_length,
+                    action_repeat=action_repeat,
+                    randomization_fn=v_randomization_fn,
+                )
+            else:
+                env = dgates_wrap(
+                    env,
+                    episode_length=episode_length,
+                    action_repeat=action_repeat,
+                    randomization_fn=v_randomization_fn,
+                )
+        
+        # Update the reset function
+        reset_fn = jax.jit(jax.vmap(env.reset, in_axes=(0)))
+        
+        logging.info(f'Changed gravity to {current_gravity}x normal gravity')
+        logging.info(f'Modified XML saved to: {modified_xml_path}')
       logging.info(metrics)
-      progress_fn((current_step, {"noise": noise}, metrics))
+      progress_fn((current_step, {"noise": noise, "gravity": current_gravity}, metrics))
       params = _unpmap(
           (training_state.normalizer_params, training_state.params)
       )

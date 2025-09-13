@@ -1,0 +1,167 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{longtable}
+\usepackage{tikz}
+\usetikzlibrary{calc}
+
+% Define custom colors for methods
+\definecolor{ppo}{HTML}{ff595e}
+\definecolor{ga}{HTML}{ffca3a}
+\definecolor{openes}{HTML}{8ac926}
+\definecolor{cmaes}{HTML}{1982c4}
+
+% Page setup for better table display
+\geometry{margin=1in}
+\pagestyle{empty}
+
+\begin{document}
+
+\begin{center}
+\Large\textbf{Cumulative Fitness Results (All Steps) with Statistical Analysis}
+\vspace{0.5cm}
+\normalsize Cumulative fitness by summing all fitness values across all training steps with statistical testing.
+\vspace{0.5cm}
+\end{center}
+
+\begin{table}[h!]
+\centering
+\caption{Cumulative Fitness Results (All Steps) with Statistical Significance}
+\begin{tabular}{|l|l|r|r|}
+\hline
+\textbf{Task} & \textbf{Method} & \textbf{Cumulative Fitness} & \textbf{Std Dev} \\
+\hline\hline
+\multirow{4}{*}{\textbf{Acrobot}} & \rowcolor{ppo!20}PPO & -346,124.32 & 24,186.78 \\
+\cline{2-4}
+ & \rowcolor{ga!20}GA & -128,614.20 & 3,312.54 \\
+\cline{2-4}
+ & \rowcolor{openes!20}OpenES & -198,205.70 & 28,079.14 \\
+\cline{2-4}
+ & \rowcolor{cmaes!20}CMA-ES & -134,384.00 & 8,743.38 \\
+\hline\hline
+\multirow{4}{*}{\textbf{Cartpole}} & \rowcolor{ppo!20}PPO & 79,326.97 & 30,141.14 \\
+\cline{2-4}
+ & \rowcolor{ga!20}GA & 285,272.30 & 45,453.70 \\
+\cline{2-4}
+ & \rowcolor{openes!20}OpenES & 225,220.80 & 32,580.03 \\
+\cline{2-4}
+ & \rowcolor{cmaes!20}CMA-ES & 341,348.50 & 37,262.92 \\
+\hline\hline
+\multirow{4}{*}{\textbf{Mountaincar}} & \rowcolor{ppo!20}PPO & -388,544.77 & 1,409.84 \\
+\cline{2-4}
+ & \rowcolor{ga!20}GA & -369,260.10 & 9,580.04 \\
+\cline{2-4}
+ & \rowcolor{openes!20}OpenES & -358,137.60 & 18,168.02 \\
+\cline{2-4}
+ & \rowcolor{cmaes!20}CMA-ES & -386,806.40 & 11,648.98 \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{center}
+\small
+\textbf{Legend:} Methods are color-coded for easy identification. Statistical significance is shown in separate tables below.
+\end{center}
+
+\subsection{Acrobot - Statistical Summary}
+
+\begin{table}[h!]
+\centering
+\caption{Acrobot - Group-Level Statistical Tests}
+\begin{tabular}{|l|r|r|c|}
+\hline
+\textbf{Test} & \textbf{Statistic} & \textbf{p-value} & \textbf{Significant} \\
+\hline\hline
+ANOVA & F=252.538 & 0.000 & Yes \\
+Kruskal-Wallis & H=32.775 & 0.000 & Yes \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[h!]
+\centering
+\caption{Acrobot - Pairwise Comparisons}
+\begin{tabular}{|l|l|l|r|r|r|c|}
+\hline
+\textbf{Method 1} & \textbf{Method 2} & \textbf{Test} & \textbf{Statistic} & \textbf{p-value} & \textbf{p-value (Bonferroni)} & \textbf{Significant} \\
+\hline\hline
+PPO & GA & Mann-Whitney U & 0.000 & 0.000 & 0.001 & Yes \\
+PPO & OpenES & t-test & -11.974 & 0.000 & 0.000 & Yes \\
+PPO & CMA-ES & Mann-Whitney U & 0.000 & 0.000 & 0.001 & Yes \\
+GA & OpenES & Mann-Whitney U & 99.000 & 0.000 & 0.001 & Yes \\
+GA & CMA-ES & Mann-Whitney U & 71.000 & 0.121 & 0.727 & No \\
+OpenES & CMA-ES & Mann-Whitney U & 3.000 & 0.000 & 0.003 & Yes \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Cartpole - Statistical Summary}
+
+\begin{table}[h!]
+\centering
+\caption{Cartpole - Group-Level Statistical Tests}
+\begin{tabular}{|l|r|r|c|}
+\hline
+\textbf{Test} & \textbf{Statistic} & \textbf{p-value} & \textbf{Significant} \\
+\hline\hline
+ANOVA & F=84.389 & 0.000 & Yes \\
+Kruskal-Wallis & H=32.087 & 0.000 & Yes \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[h!]
+\centering
+\caption{Cartpole - Pairwise Comparisons}
+\begin{tabular}{|l|l|l|r|r|r|c|}
+\hline
+\textbf{Method 1} & \textbf{Method 2} & \textbf{Test} & \textbf{Statistic} & \textbf{p-value} & \textbf{p-value (Bonferroni)} & \textbf{Significant} \\
+\hline\hline
+PPO & GA & Mann-Whitney U & 0.000 & 0.000 & 0.001 & Yes \\
+PPO & OpenES & Mann-Whitney U & 0.000 & 0.000 & 0.001 & Yes \\
+PPO & CMA-ES & Mann-Whitney U & 0.000 & 0.000 & 0.001 & Yes \\
+GA & OpenES & t-test & 3.221 & 0.005 & 0.028 & Yes \\
+GA & CMA-ES & t-test & -2.862 & 0.010 & 0.062 & No \\
+OpenES & CMA-ES & t-test & -7.038 & 0.000 & 0.000 & Yes \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Mountaincar - Statistical Summary}
+
+\begin{table}[h!]
+\centering
+\caption{Mountaincar - Group-Level Statistical Tests}
+\begin{tabular}{|l|r|r|c|}
+\hline
+\textbf{Test} & \textbf{Statistic} & \textbf{p-value} & \textbf{Significant} \\
+\hline\hline
+ANOVA & F=13.688 & 0.000 & Yes \\
+Kruskal-Wallis & H=25.001 & 0.000 & Yes \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[h!]
+\centering
+\caption{Mountaincar - Pairwise Comparisons}
+\begin{tabular}{|l|l|l|r|r|r|c|}
+\hline
+\textbf{Method 1} & \textbf{Method 2} & \textbf{Test} & \textbf{Statistic} & \textbf{p-value} & \textbf{p-value (Bonferroni)} & \textbf{Significant} \\
+\hline\hline
+PPO & GA & Mann-Whitney U & 0.000 & 0.000 & 0.001 & Yes \\
+PPO & OpenES & Mann-Whitney U & 0.000 & 0.000 & 0.001 & Yes \\
+PPO & CMA-ES & Mann-Whitney U & 40.000 & 0.473 & 1.000 & No \\
+GA & OpenES & t-test & -1.625 & 0.122 & 0.730 & No \\
+GA & CMA-ES & t-test & 3.490 & 0.003 & 0.016 & Yes \\
+OpenES & CMA-ES & t-test & 3.985 & 0.001 & 0.005 & Yes \\
+\hline
+\end{tabular}
+\end{table}
+
+\end{document}
